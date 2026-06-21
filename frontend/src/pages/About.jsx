@@ -27,7 +27,31 @@ const About = () => {
         <div className="lg:col-span-7 space-y-6 text-neutral-300 leading-relaxed text-base">
           <p>{t('about.body1')}</p>
           <p>{t('about.body2')}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-10">
+
+          {/* Company details card */}
+          <div className="mt-8 border border-neutral-800 bg-neutral-950 p-6 space-y-3">
+            <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-bold">Company Information</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 text-sm">
+              <div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Legal Entity</div>
+                <div className="text-white mt-1">Masterpiece Innovations B.V.</div>
+              </div>
+              <div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Headquarters</div>
+                <div className="text-white mt-1">Van Heuven Goedhartlaan<br/>1181 LE Amstelveen, Netherlands</div>
+              </div>
+              <div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Phone</div>
+                <a href="tel:+31625363610" className="text-white hover:text-orange-500 mt-1 inline-block">+31 6 25363610</a>
+              </div>
+              <div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Email</div>
+                <a href="mailto:yaniv@masterpiece-innovations.com" className="text-white hover:text-orange-500 mt-1 inline-block break-all">yaniv@masterpiece-innovations.com</a>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
             {[{ k: '15+', v: 'Years' }, { k: '±0.001', v: 'mm Tolerance' }, { k: '500+', v: 'B2B Clients' }, { k: '24-48h', v: 'RFQ Response' }].map((m) => (
               <div key={m.v} className="border border-neutral-800 p-4 text-center">
                 <div className="text-orange-500 text-2xl sm:text-3xl font-black">{m.k}</div>

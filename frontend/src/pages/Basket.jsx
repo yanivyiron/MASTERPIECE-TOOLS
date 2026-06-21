@@ -39,7 +39,7 @@ const Basket = () => {
             <div className="lg:col-span-8 space-y-3">
               {items.map(it => (
                 <div key={it.id} className="flex gap-4 p-4 border border-neutral-900 bg-neutral-950">
-                  <img src={it.image} alt={t(it.nameKey)} className="w-24 h-24 sm:w-28 sm:h-28 object-cover border border-neutral-800" />
+                  <img src={it.image} alt={t(it.nameKey)} className="w-24 h-24 sm:w-28 sm:h-28 object-contain p-2 bg-gradient-to-br from-neutral-900 to-black border border-neutral-800" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <Link to={`/product/${it.slug}`} className="text-white font-bold uppercase tracking-wide hover:text-orange-500">{t(it.nameKey)}</Link>

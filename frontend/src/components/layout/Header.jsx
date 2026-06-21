@@ -35,8 +35,9 @@ const Header = () => {
       <div className="hidden md:block bg-black/95 text-[11px] text-neutral-400 border-b border-neutral-800/70">
         <div className="max-w-[1400px] mx-auto px-6 py-2 flex items-center justify-between">
           <div className="flex items-center gap-5">
-            <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> yaniv@masterpiece-innovations.com</span>
-            <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> +31 (0) 20 000 0000</span>
+            <a href="mailto:yaniv@masterpiece-innovations.com" className="inline-flex items-center gap-1.5 hover:text-orange-400 transition-colors"><Mail className="w-3.5 h-3.5" /> yaniv@masterpiece-innovations.com</a>
+            <a href="tel:+31625363610" className="inline-flex items-center gap-1.5 hover:text-orange-400 transition-colors"><Phone className="w-3.5 h-3.5" /> +31 6 25363610</a>
+            <span className="hidden xl:inline-flex items-center gap-1.5 text-neutral-500"><span className="text-orange-500">●</span> Van Heuven Goedhartlaan, 1181 LE Amstelveen, NL</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-neutral-500">ISO/EN compliant • Aerospace Approved</span>

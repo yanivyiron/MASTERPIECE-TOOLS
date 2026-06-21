@@ -4,7 +4,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
-import { Mail, ShieldCheck, Save, Bell, Globe } from 'lucide-react';
+import { Mail, ShieldCheck, Save, Bell, Globe, Building2 } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 
 const KEY = 'mpt_admin_settings';
@@ -16,7 +16,10 @@ const defaults = {
   smtpPassword: '',
   notifyEmail: 'yaniv@masterpiece-innovations.com',
   fromEmail: 'noreply@masterpiece-tools.com',
-  fromName: 'Masterpiece Tools',
+  fromName: 'Masterpiece Innovations B.V.',
+  companyName: 'Masterpiece Innovations B.V.',
+  companyAddress: 'Van Heuven Goedhartlaan, 1181 LE Amstelveen, Netherlands',
+  companyPhone: '+31 6 25363610',
   notifyOnNewQuote: true,
   notifyOnReply: true,
   defaultLanguage: 'en'
@@ -49,6 +52,16 @@ const AdminSettings = () => {
       </div>
 
       <div className="space-y-6">
+        <div className="border border-neutral-800 bg-neutral-950 p-6">
+          <div className="flex items-center gap-2 mb-5"><Building2 className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Company Information</div></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2"><Label className="text-neutral-400 text-xs uppercase tracking-widest">Company Name</Label><Input value={settings.companyName} onChange={(e) => update('companyName', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+            <div className="md:col-span-2"><Label className="text-neutral-400 text-xs uppercase tracking-widest">Address</Label><Input value={settings.companyAddress} onChange={(e) => update('companyAddress', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+            <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Phone</Label><Input value={settings.companyPhone} onChange={(e) => update('companyPhone', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+            <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Public Email</Label><Input value={settings.notifyEmail} onChange={(e) => update('notifyEmail', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+          </div>
+        </div>
+
         <div className="border border-neutral-800 bg-neutral-950 p-6">
           <div className="flex items-center gap-2 mb-5"><Mail className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Email Provider</div></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
