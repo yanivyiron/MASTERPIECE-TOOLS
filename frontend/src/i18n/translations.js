@@ -54,6 +54,8 @@ export const translations = {
     'sub.endmills': 'Endmills', 'sub.drills': 'Drills', 'sub.reamers': 'Reamers',
     'p.metricPlug': 'Metric Size Plug', 'p.metricPlugDesc': 'Hardened metric plain plug gauges for inspection of bore diameters per ISO 1938-1. Available as Go/No-Go pair with traceable calibration certificate.',
     'p.threadPlug': 'Thread Plug', 'p.threadPlugDesc': 'Metric thread plug gauges per ISO 1502 / DIN 13. Go/No-Go configuration with hardened tool steel.',
+    'p.threadPlugBasic': 'Thread Plug Basic', 'p.threadPlugBasicDesc': 'Basic reference master plug for high-accuracy thread verification and setting calibration tools.',
+    'p.smoothGauges': 'Plug & Ring Smooth Gauges', 'p.smoothGaugesDesc': 'Smooth (non-threaded) plug and ring gauge pairs for bore and shaft control with lapped mirror finish.',
     'p.taperThreadPlug': 'TAPER Thread Plug', 'p.taperThreadPlugDesc': 'Tapered pipe thread plug gauges for NPT/NPTF inspection per ANSI B1.20.1 / ISO 7-2.',
     'p.helicoilMetric': 'Helicoil Metric Size Plug', 'p.helicoilMetricDesc': 'STI (Screw Thread Insert) gauges for Helicoil applications — metric range.',
     'p.metricRing': 'Metric Size Ring', 'p.metricRingDesc': 'Hardened metric plain ring gauges for shaft diameter inspection per ISO 1938-1.',
@@ -81,7 +83,8 @@ export const translations = {
     'footer.about': 'Masterpiece Tools provides aerospace-grade precision gauges and custom cutting tools to defense, medical and advanced manufacturing customers across Europe.', 'footer.products': 'Products', 'footer.company': 'Company', 'footer.contact': 'Contact', 'footer.rights': 'All rights reserved', 'footer.privacy': 'Privacy', 'footer.terms': 'Terms',
     'about.title': 'About Masterpiece Tools', 'about.lead': 'European gateway for precision metrology and cutting tool solutions.', 'about.body1': 'Masterpiece Tools provides CNC manufacturers and aerospace buyers with sub-micron precision gauges, ensuring absolute compliance for every mission-critical part. Founded on the principle of zero-defect inspection, we bridge premium engineering with reliable European logistics.', 'about.body2': 'Our team of metrology experts works closely with defense, aerospace and medical device manufacturers to design and produce gauges and cutting tools that exceed the strictest industry standards. Every product is shipped with traceable calibration documentation.',
     'admin.login': 'Owner Login', 'admin.email': 'Email', 'admin.password': 'Password', 'admin.code': 'Verification Code', 'admin.codeHint': 'Enter the 6-digit code sent to your email', 'admin.signin': 'Sign In', 'admin.requestCode': 'Send Code', 'admin.dashboard': 'Dashboard', 'admin.quotes': 'Quotes', 'admin.products': 'Products', 'admin.customers': 'Customers', 'admin.settings': 'Settings', 'admin.logout': 'Logout',
-    'lang.label': 'Language'
+    'lang.label': 'Language',
+    'stats.years': 'Years experience', 'stats.tolerance': 'Tolerance', 'stats.clients': 'B2B clients', 'stats.rfq': 'RFQ response'
   },
   nl: {
     'nav.home': 'Home', 'nav.about': 'Over Ons', 'nav.cuttingTools': 'Snijgereedschap op Maat',
@@ -129,6 +132,8 @@ export const translations = {
     'sub.endmills': 'Frezen', 'sub.drills': 'Boren', 'sub.reamers': 'Ruimers',
     'p.metricPlug': 'Metrische Plug', 'p.metricPlugDesc': 'Geharde metrische gladde plug-kalibers voor inspectie volgens ISO 1938-1.',
     'p.threadPlug': 'Draad Plug', 'p.threadPlugDesc': 'Metrische draadplug-kalibers volgens ISO 1502 / DIN 13.',
+    'p.threadPlugBasic': 'Basic Draad Plug', 'p.threadPlugBasicDesc': 'Referentie master plug voor hoge-precisie draadverificatie.',
+    'p.smoothGauges': 'Gladde Plug & Ring Kalibers', 'p.smoothGaugesDesc': 'Gladde plug- en ringkaliberparen voor boor- en as-controle.',
     'p.taperThreadPlug': 'Conische Draad Plug', 'p.taperThreadPlugDesc': 'Conische pijpdraad plug-kalibers voor NPT/NPTF-inspectie.',
     'p.helicoilMetric': 'Helicoil Metrische Plug', 'p.helicoilMetricDesc': 'STI-kalibers voor Helicoil-toepassingen — metrisch bereik.',
     'p.metricRing': 'Metrische Ring', 'p.metricRingDesc': 'Geharde metrische gladde ring-kalibers voor as-inspectie.',
@@ -204,6 +209,8 @@ export const translations = {
     'sub.endmills': 'Schaftfräser', 'sub.drills': 'Bohrer', 'sub.reamers': 'Reibahlen',
     'p.metricPlug': 'Metrischer Lehrdorn', 'p.metricPlugDesc': 'Gehärtete metrische glatte Lehrdorne für Bohrungsinspektion nach ISO 1938-1.',
     'p.threadPlug': 'Gewindelehrdorn', 'p.threadPlugDesc': 'Metrische Gewindelehrdorne nach ISO 1502 / DIN 13.',
+    'p.threadPlugBasic': 'Basic Gewindelehrdorn', 'p.threadPlugBasicDesc': 'Referenz-Masterdorn für hochpräzise Gewindekontrolle.',
+    'p.smoothGauges': 'Glatte Lehrdorn & Lehrring', 'p.smoothGaugesDesc': 'Glatte Lehrdorn-/Lehrring-Paare für Bohrungs- und Wellenkontrolle.',
     'p.taperThreadPlug': 'Kegelgewindelehrdorn', 'p.taperThreadPlugDesc': 'Kegelige Rohrgewindelehrdorne für NPT/NPTF-Inspektion.',
     'p.helicoilMetric': 'Helicoil Metrischer Dorn', 'p.helicoilMetricDesc': 'STI-Lehren für Helicoil-Anwendungen — metrischer Bereich.',
     'p.metricRing': 'Metrischer Lehrring', 'p.metricRingDesc': 'Gehärtete metrische glatte Lehrringe für Wellenkontrolle.',
@@ -231,7 +238,8 @@ export const translations = {
     'footer.about': 'Masterpiece Tools liefert luftfahrttaugliche Präzisionslehren und Sonderzerspanungswerkzeuge an Kunden in Verteidigung, Medizintechnik und Fortgeschrittener Fertigung.', 'footer.products': 'Produkte', 'footer.company': 'Unternehmen', 'footer.contact': 'Kontakt', 'footer.rights': 'Alle Rechte vorbehalten', 'footer.privacy': 'Datenschutz', 'footer.terms': 'AGB',
     'about.title': 'Über Masterpiece Tools', 'about.lead': 'Europäisches Tor für Präzisionsmetrologie und Zerspanungswerkzeuge.', 'about.body1': 'Masterpiece Tools versorgt CNC-Hersteller und Luftfahrtkäufer mit Sub-Mikron-Präzisionslehren.', 'about.body2': 'Unser Team aus Metrologie-Experten arbeitet eng mit Verteidigungs-, Luftfahrt- und Medizingeräteherstellern zusammen.',
     'admin.login': 'Inhaber Login', 'admin.email': 'E-Mail', 'admin.password': 'Passwort', 'admin.code': 'Verifizierungscode', 'admin.codeHint': 'Geben Sie den 6-stelligen Code aus Ihrer E-Mail ein', 'admin.signin': 'Anmelden', 'admin.requestCode': 'Code Senden', 'admin.dashboard': 'Dashboard', 'admin.quotes': 'Angebote', 'admin.products': 'Produkte', 'admin.customers': 'Kunden', 'admin.settings': 'Einstellungen', 'admin.logout': 'Abmelden',
-    'lang.label': 'Sprache'
+    'lang.label': 'Sprache',
+    'stats.years': 'Jahre Erfahrung', 'stats.tolerance': 'Toleranz', 'stats.clients': 'B2B-Kunden', 'stats.rfq': 'RFQ-Antwort'
   },
   fr: {
     'nav.home': 'Accueil', 'nav.about': 'À Propos', 'nav.cuttingTools': 'Outils de Coupe Sur Mesure',
@@ -279,6 +287,8 @@ export const translations = {
     'sub.endmills': 'Fraises', 'sub.drills': 'Forets', 'sub.reamers': 'Alésoirs',
     'p.metricPlug': 'Tampon Métrique', 'p.metricPlugDesc': 'Tampons lisses métriques trempés pour inspection d\'alésages selon ISO 1938-1.',
     'p.threadPlug': 'Tampon Filetage', 'p.threadPlugDesc': 'Tampons filetage métriques selon ISO 1502 / DIN 13.',
+    'p.threadPlugBasic': 'Tampon Filetage Basic', 'p.threadPlugBasicDesc': 'Tampon maître de référence pour vérification haute précision.',
+    'p.smoothGauges': 'Calibres Lisses Tampon & Bague', 'p.smoothGaugesDesc': 'Paires de calibres lisses pour contrôle d\'alésages et d\'arbres.',
     'p.taperThreadPlug': 'Tampon Filetage Conique', 'p.taperThreadPlugDesc': 'Tampons filetage conique pour inspection NPT/NPTF.',
     'p.helicoilMetric': 'Tampon Helicoil Métrique', 'p.helicoilMetricDesc': 'Calibres STI pour applications Helicoil — gamme métrique.',
     'p.metricRing': 'Bague Métrique', 'p.metricRingDesc': 'Bagues lisses métriques trempées pour inspection d\'arbres.',
@@ -306,7 +316,8 @@ export const translations = {
     'footer.about': 'Masterpiece Tools fournit des calibres de précision aérospatiaux et des outils de coupe sur mesure aux clients défense, médical et fabrication avancée en Europe.', 'footer.products': 'Produits', 'footer.company': 'Société', 'footer.contact': 'Contact', 'footer.rights': 'Tous droits réservés', 'footer.privacy': 'Confidentialité', 'footer.terms': 'Conditions',
     'about.title': 'À Propos de Masterpiece Tools', 'about.lead': 'Passerelle européenne pour métrologie de précision et outils de coupe.', 'about.body1': 'Masterpiece Tools fournit des calibres sub-microniques aux fabricants CNC et acheteurs aérospatiaux.', 'about.body2': 'Notre équipe d\'experts en métrologie travaille avec les fabricants défense, aérospatiale et dispositifs médicaux.',
     'admin.login': 'Connexion Propriétaire', 'admin.email': 'Email', 'admin.password': 'Mot de Passe', 'admin.code': 'Code de Vérification', 'admin.codeHint': 'Entrez le code à 6 chiffres reçu par email', 'admin.signin': 'Se Connecter', 'admin.requestCode': 'Envoyer le Code', 'admin.dashboard': 'Tableau de Bord', 'admin.quotes': 'Devis', 'admin.products': 'Produits', 'admin.customers': 'Clients', 'admin.settings': 'Paramètres', 'admin.logout': 'Déconnexion',
-    'lang.label': 'Langue'
+    'lang.label': 'Langue',
+    'stats.years': 'Années d\'expérience', 'stats.tolerance': 'Tolérance', 'stats.clients': 'Clients B2B', 'stats.rfq': 'Réponse RFQ'
   },
   pt: {
     'nav.home': 'Início', 'nav.about': 'Sobre Nós', 'nav.cuttingTools': 'Ferramentas de Corte Personalizadas',
@@ -354,6 +365,8 @@ export const translations = {
     'sub.endmills': 'Fresas', 'sub.drills': 'Brocas', 'sub.reamers': 'Alargadores',
     'p.metricPlug': 'Tampão Métrico', 'p.metricPlugDesc': 'Tampões lisos métricos endurecidos para inspeção de furos conforme ISO 1938-1.',
     'p.threadPlug': 'Tampão de Rosca', 'p.threadPlugDesc': 'Tampões de rosca métricos conforme ISO 1502 / DIN 13.',
+    'p.threadPlugBasic': 'Tampão de Rosca Basic', 'p.threadPlugBasicDesc': 'Tampão mestre de referência para verificação de roscas de alta precisão.',
+    'p.smoothGauges': 'Calibres Lisos Tampão & Anel', 'p.smoothGaugesDesc': 'Pares de calibres lisos para controle de furos e eixos.',
     'p.taperThreadPlug': 'Tampão Rosca Cônica', 'p.taperThreadPlugDesc': 'Tampões de rosca cônica para inspeção NPT/NPTF.',
     'p.helicoilMetric': 'Tampão Helicoil Métrico', 'p.helicoilMetricDesc': 'Calibres STI para aplicações Helicoil — métrico.',
     'p.metricRing': 'Anel Métrico', 'p.metricRingDesc': 'Anéis lisos métricos endurecidos para inspeção de eixos.',
@@ -381,6 +394,7 @@ export const translations = {
     'footer.about': 'A Masterpiece Tools fornece calibres de precisão aeroespacial e ferramentas de corte personalizadas para defesa, médico e fabricação avançada na Europa.', 'footer.products': 'Produtos', 'footer.company': 'Empresa', 'footer.contact': 'Contato', 'footer.rights': 'Todos os direitos reservados', 'footer.privacy': 'Privacidade', 'footer.terms': 'Termos',
     'about.title': 'Sobre a Masterpiece Tools', 'about.lead': 'Portal europeu para metrologia de precisão e ferramentas de corte.', 'about.body1': 'A Masterpiece Tools fornece calibres sub-mícron a fabricantes CNC e compradores aeroespaciais.', 'about.body2': 'Nossa equipe de especialistas em metrologia trabalha próximo a fabricantes de defesa, aeroespacial e dispositivos médicos.',
     'admin.login': 'Login do Proprietário', 'admin.email': 'Email', 'admin.password': 'Senha', 'admin.code': 'Código de Verificação', 'admin.codeHint': 'Digite o código de 6 dígitos enviado para seu email', 'admin.signin': 'Entrar', 'admin.requestCode': 'Enviar Código', 'admin.dashboard': 'Painel', 'admin.quotes': 'Orçamentos', 'admin.products': 'Produtos', 'admin.customers': 'Clientes', 'admin.settings': 'Configurações', 'admin.logout': 'Sair',
-    'lang.label': 'Idioma'
+    'lang.label': 'Idioma',
+    'stats.years': 'Anos de experiência', 'stats.tolerance': 'Tolerância', 'stats.clients': 'Clientes B2B', 'stats.rfq': 'Resposta RFQ'
   }
 };

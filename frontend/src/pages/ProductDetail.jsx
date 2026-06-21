@@ -56,14 +56,33 @@ const ProductDetail = () => {
 
       <div className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div>
-          <div className="relative aspect-square border border-neutral-900 bg-neutral-950 overflow-hidden">
-            <img src={product.image} alt={t(product.nameKey)} className="w-full h-full object-cover" />
+          <div className="relative aspect-square border border-neutral-900 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black overflow-hidden group">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,107,26,0.18),transparent_55%)]" />
+            <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-[size:32px_32px]" />
+            <img src={product.image} alt={t(product.nameKey)} className="absolute inset-0 w-full h-full object-contain p-12 transition-transform duration-700 group-hover:scale-105 drop-shadow-[0_25px_35px_rgba(0,0,0,0.5)]" />
+            {/* Corner brackets */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-orange-500" />
+            <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-orange-500" />
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-orange-500" />
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-orange-500" />
             {product.badge && (
-              <div className="absolute top-4 left-4 px-2.5 py-1 text-[10px] tracking-[0.15em] font-semibold border border-orange-500/40 text-orange-400 bg-black/60 backdrop-blur-sm">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1.5 text-[10px] tracking-[0.2em] font-bold border border-orange-500/50 text-orange-300 bg-black/70 backdrop-blur-sm">
                 <span className="inline-flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> {product.badge.toUpperCase()}</span>
               </div>
             )}
           </div>
+
+          {/* Features list under image */}
+          {product.features && (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {product.features.map((f, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-neutral-300 border border-neutral-900 bg-neutral-950 p-3">
+                  <BadgeCheck className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                  <span>{f}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>

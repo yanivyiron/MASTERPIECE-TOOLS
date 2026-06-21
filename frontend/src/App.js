@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BasketDrawer from './components/BasketDrawer';
+import { ScrollProgress } from './components/animations';
 import { Toaster } from './components/ui/toaster';
 
 import Home from './pages/Home';
@@ -33,6 +34,7 @@ const ScrollToTop = () => {
 
 const PublicShell = ({ children }) => (
   <>
+    <ScrollProgress />
     <Header />
     <main>{children}</main>
     <Footer />

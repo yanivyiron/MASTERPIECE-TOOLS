@@ -2,15 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '../context/LanguageContext';
 import { useBasket } from '../context/BasketContext';
-import { Plus, ArrowUpRight, BadgeCheck } from 'lucide-react';
+import { Plus, ArrowUpRight, BadgeCheck, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from '../hooks/use-toast';
+import { Tilt3D, SpotlightCard } from './animations';
 
 const BADGE_MAP = {
-  aerospace: { label: 'AEROSPACE', color: 'text-orange-400 border-orange-500/40' },
-  iso: { label: 'ISO/EN', color: 'text-emerald-400 border-emerald-500/40' },
-  precision: { label: 'PRECISION', color: 'text-sky-400 border-sky-500/40' },
-  carbide: { label: 'CARBIDE', color: 'text-amber-400 border-amber-500/40' }
+  aerospace: { label: 'AEROSPACE', color: 'text-orange-300 border-orange-500/50 bg-orange-500/10' },
+  iso: { label: 'ISO/EN', color: 'text-emerald-300 border-emerald-500/50 bg-emerald-500/10' },
+  precision: { label: 'PRECISION', color: 'text-sky-300 border-sky-500/50 bg-sky-500/10' },
+  carbide: { label: 'CARBIDE', color: 'text-amber-300 border-amber-500/50 bg-amber-500/10' }
 };
 
 const ProductCard = ({ product, variant = 'default' }) => {
@@ -29,52 +30,70 @@ const ProductCard = ({ product, variant = 'default' }) => {
   };
 
   return (
-    <Link
-      to={`/product/${product.slug}`}
-      className="group relative block bg-neutral-950 border border-neutral-900 hover:border-neutral-700 transition-all duration-300 overflow-hidden"
-    >
-      <div className="relative aspect-[4/3] overflow-hidden bg-neutral-900">
-        <img
-          src={product.image}
-          alt={t(product.nameKey)}
-          loading="lazy"
-          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-[1.06] transition-all duration-700 ease-out"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+    <Tilt3D max={5} className="h-full">
+      <Link
+        to={`/product/${product.slug}`}
+        className="group relative block h-full bg-neutral-950 border border-neutral-900 hover:border-orange-500/60 transition-all duration-500 overflow-hidden"
+      >
+        <SpotlightCard className="h-full" size={300}>
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/0 group-hover:via-orange-500 to-transparent transition-all duration-700" />
 
-        {badge && (
-          <div className={`absolute top-3 left-3 px-2 py-1 text-[10px] tracking-[0.15em] font-semibold border ${badge.color} bg-black/60 backdrop-blur-sm`}>
-            <span className="inline-flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> {badge.label}</span>
-          </div>
-        )}
+          {/* Product image */}
+          <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-950 to-black">
+            {/* Animated radial light behind product */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,107,26,0.2),transparent_55%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <img
+              src={product.image}
+              alt={t(product.nameKey)}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-contain p-6 transition-all duration-700 ease-out group-hover:scale-110 group-hover:-rotate-2 drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)]"
+              onError={(e) => { e.currentTarget.style.opacity = '0.4'; }}
+            />
+            {/* Grid pattern overlay */}
+            <div className="absolute inset-0 opacity-[0.04] bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h3 className="text-white font-bold tracking-wide text-base sm:text-lg uppercase leading-tight">{t(product.nameKey)}</h3>
-              <div className="mt-1 text-[11px] text-neutral-300/80 tracking-wider uppercase">{product.specs?.standard || t('sub.thread')}</div>
+            {/* Top badge */}
+            {badge && (
+              <div className={`absolute top-3 left-3 px-2 py-1 text-[10px] tracking-[0.15em] font-bold border ${badge.color} backdrop-blur-sm`}>
+                <span className="inline-flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> {badge.label}</span>
+              </div>
+            )}
+
+            {/* Hover arrow */}
+            <div className="absolute top-3 right-3 w-9 h-9 border border-orange-500/0 group-hover:border-orange-500/60 group-hover:bg-orange-500/10 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+              <ArrowUpRight className="w-4 h-4 text-orange-400" />
             </div>
-            <ArrowUpRight className="w-5 h-5 text-orange-500 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300" />
           </div>
-        </div>
-      </div>
 
-      {variant !== 'compact' && (
-        <div className="p-4 border-t border-neutral-900 flex items-center justify-between gap-2">
-          <div className="text-[11px] text-neutral-500 tracking-wider">{product.leadTime || ''}</div>
-          <Button
-            type="button"
-            onClick={handleAdd}
-            size="sm"
-            className={`rounded-none h-8 px-3 text-[11px] tracking-widest font-semibold transition-colors ${
-              adding ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-400'
-            } text-white`}
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" /> {adding ? t('btn.added') : t('btn.addBasket')}
-          </Button>
-        </div>
-      )}
-    </Link>
+          {/* Info section */}
+          <div className="relative p-4 border-t border-neutral-900 bg-gradient-to-b from-neutral-950 to-black">
+            <div className="text-[10px] tracking-[0.2em] uppercase text-orange-500/80 font-semibold">{product.specs?.standard?.split(' /')[0] || 'PRECISION GAUGE'}</div>
+            <h3 className="text-white font-bold tracking-wide text-base uppercase mt-1 leading-tight line-clamp-2">{t(product.nameKey)}</h3>
+            <p className="mt-1 text-xs text-neutral-500 line-clamp-2 leading-relaxed">{t(product.descKey)}</p>
+
+            {variant !== 'compact' && (
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="text-[10px] text-neutral-500 tracking-wider inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {product.leadTime || 'In stock'}
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  size="sm"
+                  className={`rounded-none h-8 px-3 text-[11px] tracking-widest font-bold transition-all duration-300 ${
+                    adding ? 'bg-emerald-600 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-orange-500 hover:bg-orange-400 hover:shadow-lg hover:shadow-orange-500/40'
+                  } text-white shadow-md`}
+                >
+                  {adding ? <><Check className="w-3.5 h-3.5 mr-1" /> {t('btn.added')}</> : <><Plus className="w-3.5 h-3.5 mr-1" /> {t('btn.addBasket')}</>}
+                </Button>
+              </div>
+            )}
+          </div>
+        </SpotlightCard>
+      </Link>
+    </Tilt3D>
   );
 };
 
