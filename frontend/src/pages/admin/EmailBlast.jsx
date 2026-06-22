@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { toast } from '../../hooks/use-toast';
 import { api } from '../../lib/api';
+import { safeHtml } from '../../lib/sanitize';
 
 const EmailBlast = () => {
   const [customers, setCustomers] = useState([]);
@@ -34,6 +35,7 @@ const EmailBlast = () => {
         toast({ title: 'Failed to load', description: e.message });
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial load
   }, []);
 
   const filtered = useMemo(() => {
@@ -154,7 +156,7 @@ const EmailBlast = () => {
           </div>
           <div>
             <label className="text-[10px] uppercase tracking-widest text-neutral-500">Preview</label>
-            <div className="border border-neutral-800 bg-white text-black min-h-[140px] p-3 overflow-auto" dangerouslySetInnerHTML={{ __html: html }} />
+            <div className="border border-neutral-800 bg-white text-black min-h-[140px] p-3 overflow-auto" dangerouslySetInnerHTML={safeHtml(html)} />
           </div>
           <div>
             <label className="text-[10px] uppercase tracking-widest text-neutral-500">Attachments</label>

@@ -9,9 +9,18 @@ if (!BASE) {
 
 const tokenKey = 'mpt_owner_jwt';
 
-export const setToken = (t) => { try { localStorage.setItem(tokenKey, t); } catch (e) { /* ignore */ } };
-export const getToken = () => { try { return localStorage.getItem(tokenKey); } catch (e) { return null; } };
-export const clearToken = () => { try { localStorage.removeItem(tokenKey); } catch (e) { /* ignore */ } };
+export const setToken = (t) => {
+  try { localStorage.setItem(tokenKey, t); }
+  catch (e) { /* eslint-disable-next-line no-console */ console.warn('Cannot write token to localStorage:', e?.message || e); }
+};
+export const getToken = () => {
+  try { return localStorage.getItem(tokenKey); }
+  catch (e) { /* eslint-disable-next-line no-console */ console.warn('Cannot read token from localStorage:', e?.message || e); return null; }
+};
+export const clearToken = () => {
+  try { localStorage.removeItem(tokenKey); }
+  catch (e) { /* eslint-disable-next-line no-console */ console.warn('Cannot clear token:', e?.message || e); }
+};
 
 const request = async (method, path, { body, auth = false, signal } = {}) => {
   const headers = { 'Content-Type': 'application/json' };

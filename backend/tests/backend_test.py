@@ -19,9 +19,9 @@ import requests
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://pro-tools-hub-7.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
-OWNER_EMAIL = "yaniv@masterpiece-innovations.com"
-OWNER_PASSWORD = "Master2025!"
-LEGACY_EMAIL = "admin@masterpiece-tools.com"
+OWNER_EMAIL = os.environ.get("TEST_OWNER_EMAIL", "yaniv@masterpiece-innovations.com")
+OWNER_PASSWORD = os.environ.get("TEST_OWNER_PASSWORD", "Master2025!")
+LEGACY_EMAIL = os.environ.get("TEST_LEGACY_EMAIL", "admin@masterpiece-tools.com")
 
 
 # ---------- Shared session & login fixtures ----------

@@ -99,7 +99,7 @@ const ProductDetail = () => {
           {product.features && (
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {product.features.map((f, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm text-neutral-300 border border-neutral-900 bg-neutral-950 p-3">
+                <div key={`${f}-${i}`} className="flex items-start gap-2 text-sm text-neutral-300 border border-neutral-900 bg-neutral-950 p-3">
                   <BadgeCheck className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
                   <span>{f}</span>
                 </div>

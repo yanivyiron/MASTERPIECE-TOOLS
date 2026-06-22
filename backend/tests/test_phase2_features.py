@@ -21,8 +21,8 @@ BASE_URL = os.environ.get(
 ).rstrip("/")
 API = f"{BASE_URL}/api"
 
-OWNER_EMAIL = "yaniv@masterpiece-innovations.com"
-OWNER_PASSWORD = "Master2025!"
+OWNER_EMAIL = os.environ.get("TEST_OWNER_EMAIL", "yaniv@masterpiece-innovations.com")
+OWNER_PASSWORD = os.environ.get("TEST_OWNER_PASSWORD", "Master2025!")
 
 
 @pytest.fixture(scope="session")
@@ -262,47 +262,60 @@ class TestAIStudio:
 
     def test_update_settings_with_undo(self, http, auth):
         cid = self._create_convo(http, auth)
-        # First reset contactPhone to a known initial value via PUT
-        cur = http.get(f"{API}/settings").json().get("data", {})
-        # Defensive: unwrap if endpoint ever returns nested {data:{data:...}}
-        while isinstance(cur, dict) and "data" in cur and isinstance(cur["data"], dict):
-            cur = cur["data"]
-        cur["contactPhone"] = "+1 000 000 0000"
-        rput = http.put(f"{API}/admin/settings", json=cur, headers=auth)
-        assert rput.status_code == 200, rput.text
-        current_phone = "+1 000 000 0000"
-        # ask AI to change
-        r = requests.post(
-            f"{API}/admin/ai/conversations/{cid}/messages",
-            json={"message": "Change the contact phone to +31 20 555 0001"},
-            headers=auth, timeout=90,
-        )
-        assert r.status_code == 200, r.text
-        am = r.json().get("assistantMessage", {})
-        actions = am.get("actions") or []
-        action_id = None
-        for a in actions:
-            if a.get("tool") in ("update_settings", "set_settings"):
-                action_id = a.get("id")
-        if not action_id:
-            pytest.skip(f"AI did not produce update_settings action. content={am.get('content','')[:200]}; actions={actions}")
-        # verify phone changed
-        new_settings = http.get(f"{API}/settings").json().get("data", {})
-        while isinstance(new_settings, dict) and "data" in new_settings and isinstance(new_settings["data"], dict):
-            new_settings = new_settings["data"]
-        new_phone = new_settings.get("contactPhone", "")
-        if "+31 20 555 0001" not in new_phone:
-            pytest.skip(f"AI called tool but phone not updated. Args: {[a.get('args') for a in actions]}; new_phone={new_phone!r}")
+        # Capture the TRUE original contactPhone so we can guarantee restoration even on skip.
+        original_data = http.get(f"{API}/settings").json().get("data", {})
+        while isinstance(original_data, dict) and "data" in original_data and isinstance(original_data["data"], dict):
+            original_data = original_data["data"]
+        original_phone = original_data.get("contactPhone", "")
+        try:
+            # Reset contactPhone to a known initial value via PUT
+            cur = dict(original_data)
+            cur["contactPhone"] = "+1 000 000 0000"
+            rput = http.put(f"{API}/admin/settings", json=cur, headers=auth)
+            assert rput.status_code == 200, rput.text
+            current_phone = "+1 000 000 0000"
+            # ask AI to change
+            r = requests.post(
+                f"{API}/admin/ai/conversations/{cid}/messages",
+                json={"message": "Change the contact phone to +31 20 555 0001"},
+                headers=auth, timeout=90,
+            )
+            assert r.status_code == 200, r.text
+            am = r.json().get("assistantMessage", {})
+            actions = am.get("actions") or []
+            action_id = None
+            for a in actions:
+                if a.get("tool") in ("update_settings", "set_settings"):
+                    action_id = a.get("id")
+            if not action_id:
+                pytest.skip(f"AI did not produce update_settings action. content={am.get('content','')[:200]}; actions={actions}")
+            # verify phone changed
+            new_settings = http.get(f"{API}/settings").json().get("data", {})
+            while isinstance(new_settings, dict) and "data" in new_settings and isinstance(new_settings["data"], dict):
+                new_settings = new_settings["data"]
+            new_phone = new_settings.get("contactPhone", "")
+            if "+31 20 555 0001" not in new_phone:
+                pytest.skip(f"AI called tool but phone not updated. Args: {[a.get('args') for a in actions]}; new_phone={new_phone!r}")
 
-        # Undo
-        ru = http.post(f"{API}/admin/ai/actions/{action_id}/undo", headers=auth)
-        assert ru.status_code == 200, ru.text
-        assert ru.json().get("ok") is True
-        rev_settings = http.get(f"{API}/settings").json().get("data", {})
-        while isinstance(rev_settings, dict) and "data" in rev_settings and isinstance(rev_settings["data"], dict):
-            rev_settings = rev_settings["data"]
-        rev = rev_settings.get("contactPhone", "")
-        assert rev == current_phone, f"expected {current_phone!r}, got {rev!r}"
+            # Undo
+            ru = http.post(f"{API}/admin/ai/actions/{action_id}/undo", headers=auth)
+            assert ru.status_code == 200, ru.text
+            assert ru.json().get("ok") is True
+            rev_settings = http.get(f"{API}/settings").json().get("data", {})
+            while isinstance(rev_settings, dict) and "data" in rev_settings and isinstance(rev_settings["data"], dict):
+                rev_settings = rev_settings["data"]
+            rev = rev_settings.get("contactPhone", "")
+            assert rev == current_phone, f"expected {current_phone!r}, got {rev!r}"
+        finally:
+            # Always restore the true original contactPhone so other tests / production data stay clean.
+            try:
+                cur = http.get(f"{API}/settings").json().get("data", {})
+                while isinstance(cur, dict) and "data" in cur and isinstance(cur["data"], dict):
+                    cur = cur["data"]
+                cur["contactPhone"] = original_phone
+                http.put(f"{API}/admin/settings", json=cur, headers=auth)
+            except Exception as restore_err:
+                print(f"WARNING: could not restore contactPhone to {original_phone!r}: {restore_err}")
 
     def test_ai_file_upload(self, http, auth):
         cid = self._create_convo(http, auth)

@@ -8,12 +8,20 @@ export const BasketProvider = ({ children }) => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+    } catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('BasketContext: cannot read basket:', e?.message || e);
+      return [];
+    }
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {/* ignore */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('BasketContext: cannot persist basket:', e?.message || e);
+    }
   }, [items]);
 
   const addItem = useCallback((product, qty = 1, notes = '') => {
@@ -43,7 +51,10 @@ export const BasketProvider = ({ children }) => {
 
   const count = useMemo(() => items.reduce((a, b) => a + b.qty, 0), [items]);
 
-  const value = { items, count, addItem, updateQty, updateNotes, removeItem, clear, drawerOpen, setDrawerOpen };
+  const value = useMemo(
+    () => ({ items, count, addItem, updateQty, updateNotes, removeItem, clear, drawerOpen, setDrawerOpen }),
+    [items, count, addItem, updateQty, updateNotes, removeItem, clear, drawerOpen],
+  );
   return <BasketContext.Provider value={value}>{children}</BasketContext.Provider>;
 };
 

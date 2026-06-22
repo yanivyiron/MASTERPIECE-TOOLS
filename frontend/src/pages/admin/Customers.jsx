@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Search, Mail, Building, Globe, Edit3, Trash2, Loader2, Tag, Ban, CheckCircle, Send } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { api } from '../../lib/api';
+import { safeHtml } from '../../lib/sanitize';
 
 const AdminCustomers = () => {
   const [list, setList] = useState([]);
@@ -196,7 +197,7 @@ const AdminCustomers = () => {
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-widest text-neutral-500">Preview</label>
-                <div className="border border-neutral-800 bg-white text-black min-h-[120px] p-3 overflow-auto" dangerouslySetInnerHTML={{ __html: emailing.html }} />
+                <div className="border border-neutral-800 bg-white text-black min-h-[120px] p-3 overflow-auto" dangerouslySetInnerHTML={safeHtml(emailing.html)} />
               </div>
             </div>
             <div className="border-t border-neutral-900 px-5 py-3 flex justify-end gap-2">

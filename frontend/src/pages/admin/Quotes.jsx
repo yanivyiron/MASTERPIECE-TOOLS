@@ -204,7 +204,7 @@ const AdminQuotes = () => {
                     <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Items</div>
                     <div className="space-y-1 text-sm text-neutral-300">
                       {active.items.map((it, i) => (
-                        <div key={i} className="border border-neutral-900 px-2 py-1 flex justify-between"><span>{it.name || it.slug}</span><span className="text-neutral-500">× {it.qty}</span></div>
+                        <div key={it.id || it.slug || `item-${i}`} className="border border-neutral-900 px-2 py-1 flex justify-between"><span>{it.name || it.slug}</span><span className="text-neutral-500">× {it.qty}</span></div>
                       ))}
                     </div>
                   </div>
@@ -220,7 +220,7 @@ const AdminQuotes = () => {
                     <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1 flex items-center gap-1"><Paperclip className="w-3 h-3" /> Attachments</div>
                     <div className="space-y-1">
                       {active.attachments.map((a, i) => (
-                        <button key={i} onClick={() => downloadAttachment(a)} data-testid={`admin-quote-att-${i}`} className="w-full text-left text-sm text-neutral-300 border border-neutral-800 hover:border-orange-500 hover:text-orange-400 p-2 flex items-center justify-between">
+                        <button key={`${a.name}-${a.size || 0}-${i}`} onClick={() => downloadAttachment(a)} data-testid={`admin-quote-att-${i}`} className="w-full text-left text-sm text-neutral-300 border border-neutral-800 hover:border-orange-500 hover:text-orange-400 p-2 flex items-center justify-between">
                           <span className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-orange-500" /> {a.name}</span>
                           <Download className="w-3.5 h-3.5" />
                         </button>
@@ -245,7 +245,7 @@ const AdminQuotes = () => {
                     <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Past replies ({active.replies.length})</div>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {active.replies.map((r, i) => (
-                        <div key={i} className="border border-neutral-900 p-2 text-xs text-neutral-300">
+                        <div key={`${r.at}-${i}`} className="border border-neutral-900 p-2 text-xs text-neutral-300">
                           <div className="text-neutral-500">{fmtDate(r.at)} · {r.by} · {r.mode}</div>
                           <div className="font-bold mt-1">{r.subject}</div>
                           <div className="text-neutral-400 whitespace-pre-wrap mt-1">{r.message}</div>

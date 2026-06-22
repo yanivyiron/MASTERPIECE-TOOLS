@@ -312,5 +312,5 @@ export const MOCK_CUSTOMERS = [
   { id: 'c4', name: 'Carlos Silva', company: 'Embraer Portugal', email: 'c.silva@embraer.pt', country: 'Portugal', quotesCount: 1, totalValue: 1820 }
 ];
 
-// Default admin credentials (will be replaced by backend auth)
-export const MOCK_ADMIN = { email: 'admin@masterpiece-tools.com', password: 'Master2025!' };
+// Default admin credentials are now seeded by the backend on first boot — see /app/backend/auth.py.
+// Credentials are NEVER hardcoded in the frontend bundle.

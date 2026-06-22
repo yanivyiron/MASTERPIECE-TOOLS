@@ -7,6 +7,7 @@ import { CallToAction, TrustedClients, MicronPrecision, PrecisionShowcase } from
 import { useLang } from '../context/LanguageContext';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import SEO from '../components/SEO';
+import { jsonLd } from '../lib/sanitize';
 
 const Home = () => {
   const { t } = useLang();
@@ -34,8 +35,8 @@ const Home = () => {
   return (
     <>
       <SEO path="/" />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldOrg) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldWebsite) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ldOrg) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ldWebsite) }} />
       <Hero />
       <TrustedClients />
       <PrecisionShowcase />

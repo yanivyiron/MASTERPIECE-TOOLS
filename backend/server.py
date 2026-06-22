@@ -808,10 +808,13 @@ async def admin_list_team(auth=Depends(require_perm("team.read"))):
 
 @api.post("/admin/team")
 async def admin_create_team(body: TeamMemberIn, auth=Depends(require_owner)):
+    member: Optional[dict] = None
     try:
         member = await create_team_member(body.email, body.name, body.role, body.password, body.permissions)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    if member is None:
+        raise HTTPException(status_code=500, detail="Failed to create member")
     # Welcome email (best effort)
     site_url = (await db.settings.find_one({"_id": "site"}) or {}).get("data", {}).get("primaryDomain") or "your team panel"
     try:
@@ -826,8 +829,8 @@ async def admin_create_team(body: TeamMemberIn, auth=Depends(require_owner)):
                 f"</div>"
             ),
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Welcome email failed for %s: %s", member["email"], e)
     return {"ok": True, "member": member}
 
 

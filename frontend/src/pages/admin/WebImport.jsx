@@ -171,7 +171,7 @@ const WebImport = () => {
 
       <div className="space-y-3">
         {pages.map((pg, pi) => (
-          <Section key={pi} title={pg.title || pg.url} count={`${pg.headings?.length || 0} headings · ${pg.images?.length || 0} images`}>
+          <Section key={pg.url || `page-${pi}`} title={pg.title || pg.url} count={`${pg.headings?.length || 0} headings · ${pg.images?.length || 0} images`}>
             <div className="flex items-center justify-between mb-3">
               <a href={pg.url} target="_blank" rel="noreferrer" className="text-xs text-neutral-400 hover:text-orange-400 inline-flex items-center gap-1"><LinkIcon className="w-3 h-3" />{pg.url}<ExternalLink className="w-3 h-3" /></a>
               <label className="inline-flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
@@ -185,7 +185,7 @@ const WebImport = () => {
                 <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Headings</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                   {pg.headings.map((h, hi) => (
-                    <label key={hi} className="flex items-start gap-2 text-xs text-neutral-300 cursor-pointer hover:bg-neutral-900/40 px-2 py-1">
+                    <label key={`${pi}-h${hi}-${h.text?.slice(0, 30)}`} className="flex items-start gap-2 text-xs text-neutral-300 cursor-pointer hover:bg-neutral-900/40 px-2 py-1">
                       <input type="checkbox" checked={!!picked[`h:${pi}:${hi}`]} onChange={() => toggleHeading(pi, hi)} data-testid={`import-h-${pi}-${hi}`} />
                       <span className="text-neutral-500 font-mono text-[10px] mt-0.5">H{h.level}</span>
                       <span>{h.text}</span>
@@ -199,7 +199,7 @@ const WebImport = () => {
                 <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Images</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                   {pg.images.map((src, ii) => (
-                    <label key={ii} className={`relative border ${picked[`img:${pi}:${ii}`] ? 'border-orange-500' : 'border-neutral-800'} bg-black aspect-square overflow-hidden cursor-pointer block`}>
+                    <label key={`${pi}-img-${src}`} className={`relative border ${picked[`img:${pi}:${ii}`] ? 'border-orange-500' : 'border-neutral-800'} bg-black aspect-square overflow-hidden cursor-pointer block`}>
                       <input type="checkbox" className="absolute top-1 left-1 z-10" checked={!!picked[`img:${pi}:${ii}`]} onChange={() => toggleImage(pi, ii)} data-testid={`import-img-${pi}-${ii}`} />
                       <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     </label>

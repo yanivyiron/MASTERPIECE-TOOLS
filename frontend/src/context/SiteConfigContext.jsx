@@ -88,7 +88,11 @@ const readLocal = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
+  } catch (e) {
+    /* eslint-disable-next-line no-console */
+    console.warn('SiteConfigContext: cannot read local cache:', e?.message || e);
+    return null;
+  }
 };
 
 export const SiteConfigProvider = ({ children }) => {
@@ -96,12 +100,21 @@ export const SiteConfigProvider = ({ children }) => {
   const [hydrating, setHydrating] = useState(true);
   const [serverSynced, setServerSynced] = useState(false);
   const [editMode, setEditMode] = useState(() => {
-    try { return localStorage.getItem('mpt_edit_mode') === '1'; } catch { return false; }
+    try { return localStorage.getItem('mpt_edit_mode') === '1'; }
+    catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('SiteConfigContext: cannot read edit-mode flag:', e?.message || e);
+      return false;
+    }
   });
 
   // Keep editMode in sync with localStorage
   useEffect(() => {
-    try { localStorage.setItem('mpt_edit_mode', editMode ? '1' : '0'); } catch { /* ignore */ }
+    try { localStorage.setItem('mpt_edit_mode', editMode ? '1' : '0'); }
+    catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('SiteConfigContext: cannot persist edit-mode flag:', e?.message || e);
+    }
   }, [editMode]);
 
   // Hydrate from backend on boot (overrides cached values)
@@ -116,6 +129,7 @@ export const SiteConfigProvider = ({ children }) => {
         }
       } catch (e) {
         // Backend unreachable — silently keep local cache so the site still works
+        /* eslint-disable-next-line no-console */
         console.warn('Settings hydration failed, using local cache:', e?.message);
       } finally {
         if (!cancelled) setHydrating(false);
@@ -126,7 +140,11 @@ export const SiteConfigProvider = ({ children }) => {
 
   // Persist to localStorage on every change (fast cache; client-only fields like logoImageDataUrl)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); }
+    catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('SiteConfigContext: cannot persist config cache:', e?.message || e);
+    }
   }, [config]);
 
   const saveToServer = useCallback(async () => {

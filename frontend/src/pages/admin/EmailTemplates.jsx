@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { toast } from '../../hooks/use-toast';
 import { api } from '../../lib/api';
+import { safeHtml } from '../../lib/sanitize';
 
 const blank = {
   name: '', subject: '', kind: 'custom', description: '',
@@ -143,7 +144,7 @@ const AdminEmailTemplates = () => {
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500">Live preview</label>
-                  <div className="border border-neutral-800 bg-white text-black min-h-[280px] p-4 overflow-auto" dangerouslySetInnerHTML={{ __html: editing.html }} />
+                  <div className="border border-neutral-800 bg-white text-black min-h-[280px] p-4 overflow-auto" dangerouslySetInnerHTML={safeHtml(editing.html)} />
                 </div>
               </div>
             </div>

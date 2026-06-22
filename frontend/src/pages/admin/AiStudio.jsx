@@ -136,7 +136,7 @@ const Message = ({ msg, isUser, editing, onStartEdit, onSaveEdit, onCancelEdit, 
               {(msg.attachments || []).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {(msg.attachments || []).map((a, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 bg-black/30 border border-black/40 px-2 py-0.5 text-[11px] text-black/90">
+                    <span key={`${a.name}-${a.size}-${i}`} className="inline-flex items-center gap-1.5 bg-black/30 border border-black/40 px-2 py-0.5 text-[11px] text-black/90">
                       <FileText className="w-3 h-3" /> {a.name}
                     </span>
                   ))}
@@ -210,6 +210,7 @@ const AiStudio = () => {
         setActiveId(list[0].id);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run-once mount effect
   }, []);
 
   useEffect(() => {
@@ -413,7 +414,7 @@ const AiStudio = () => {
           {pendingFiles.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2" data-testid="ai-pending-files">
               {pendingFiles.map((f, i) => (
-                <div key={i} className="inline-flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300">
+                <div key={`${f.name}-${f.size}-${i}`} className="inline-flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300">
                   <FileText className="w-3.5 h-3.5 text-orange-500" />
                   <span className="max-w-[180px] truncate">{f.name}</span>
                   <span className="text-neutral-600">{Math.round(f.size / 1024)} KB</span>

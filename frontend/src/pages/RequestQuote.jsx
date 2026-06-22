@@ -52,7 +52,10 @@ const RequestQuote = () => {
         const a = await fileToDataURL(f);
         if (a) { attachments.push(a); total += f.size; }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('Attachment encoding failed:', e?.message || e);
+    }
 
     const payload = {
       firstName: form.firstName,
@@ -83,12 +86,18 @@ const RequestQuote = () => {
       const existing = JSON.parse(localStorage.getItem('mpt_quotes') || '[]');
       existing.unshift({ id: qid || `Q-LOCAL-${Date.now()}`, ...payload, submittedAt: new Date().toISOString() });
       localStorage.setItem('mpt_quotes', JSON.stringify(existing));
-    } catch (err) { /* ignore */ }
+    } catch (err) {
+      /* eslint-disable-next-line no-console */
+      console.warn('Quote local-storage fallback failed:', err?.message || err);
+    }
 
     setSubmitting(false);
     setSuccess(true);
     // Wipe the basket immediately so the same items aren't re-submitted on the next quote.
-    try { clear(); } catch (e) { /* ignore */ }
+    try { clear(); } catch (e) {
+      /* eslint-disable-next-line no-console */
+      console.warn('Basket clear after quote failed:', e?.message || e);
+    }
     toast({ title: t('quote.success'), description: qid ? `${qid} — ${form.email}` : form.email });
   };
 
