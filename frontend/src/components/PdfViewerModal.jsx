@@ -89,13 +89,14 @@ const PdfViewerModal = ({ open, onClose, src, title }) => {
             </div>
 
             <div className="flex-1 bg-neutral-900 relative">
-              <object
-                data={`${src}#toolbar=1&navpanes=0&statusbar=0&view=FitH`}
-                type="application/pdf"
-                className="w-full h-full"
-                aria-label={title}
-              >
-                <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <iframe
+                src={`${src}#toolbar=1&navpanes=0&statusbar=0&view=FitH`}
+                title={title}
+                className="w-full h-full border-0"
+                data-testid="pdf-iframe"
+              />
+              <noscript>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                   <FileText className="w-12 h-12 text-orange-500 mb-3" />
                   <div className="text-white font-semibold">PDF preview unavailable on this device.</div>
                   <a
@@ -107,7 +108,7 @@ const PdfViewerModal = ({ open, onClose, src, title }) => {
                     <ExternalLink className="w-4 h-4" /> {t('btn.openFullscreen')}
                   </a>
                 </div>
-              </object>
+              </noscript>
             </div>
 
             {/* Mobile-only action bar */}
