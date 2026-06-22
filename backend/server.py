@@ -37,6 +37,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import os
 import logging
+import re
 
 from base import BaseDocument, now_iso, new_uuid
 from auth import (
@@ -52,6 +53,7 @@ from email_service import (
 )
 from translate_service import translate_fields, llm_configured
 from ai_assistant import run_assistant, execute_undo, extract_attachment_text
+from web_importer import crawl_site
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -593,6 +595,47 @@ async def admin_settings_repair(auth=Depends(require_owner)):
         return {"ok": True, "hops": 0, "note": "Already flat."}
     await db.settings.update_one({"_id": "site"}, {"$set": {"data": data, "updatedAt": now_iso()}}, upsert=True)
     return {"ok": True, "hops": hops}
+
+
+# ============================================================
+# Site overrides — the Wix-like visual editor backend
+# ============================================================
+# Every editable block on the public site has a key like "home.hero.title" or
+# "footer.copyright". When the owner edits, we store the override here.
+# The public /api/settings exposes them, the site reads them through SiteConfigContext.
+
+class OverridePut(BaseModel):
+    key: str = Field(min_length=1, max_length=120, pattern=r"^[a-zA-Z0-9_.-]+$")
+    value: Any = None
+
+
+@api.get("/admin/site-overrides")
+async def admin_get_overrides(auth=Depends(require_perm("settings.read"))):
+    doc = await db.settings.find_one({"_id": "site"}) or {}
+    return {"overrides": (doc.get("data") or {}).get("site_overrides") or {}}
+
+
+@api.put("/admin/site-overrides")
+async def admin_put_override(body: OverridePut, auth=Depends(require_perm("settings.edit"))):
+    doc = await db.settings.find_one({"_id": "site"}) or {}
+    data = (doc.get("data") or {})
+    overrides = data.get("site_overrides") or {}
+    overrides[body.key] = body.value
+    data["site_overrides"] = overrides
+    await db.settings.update_one({"_id": "site"}, {"$set": {"data": data, "updatedAt": now_iso()}}, upsert=True)
+    return {"ok": True, "key": body.key}
+
+
+@api.delete("/admin/site-overrides/{key:path}")
+async def admin_delete_override(key: str, auth=Depends(require_perm("settings.edit"))):
+    doc = await db.settings.find_one({"_id": "site"}) or {}
+    data = (doc.get("data") or {})
+    overrides = data.get("site_overrides") or {}
+    if key in overrides:
+        del overrides[key]
+        data["site_overrides"] = overrides
+        await db.settings.update_one({"_id": "site"}, {"$set": {"data": data, "updatedAt": now_iso()}}, upsert=True)
+    return {"ok": True}
 
 
 # ============================================================
@@ -1260,6 +1303,93 @@ async def ai_delete_document(did: str, auth=Depends(require_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"ok": True}
+
+
+# ============================================================
+# Website importer
+# ============================================================
+class CrawlRequest(BaseModel):
+    url: str = Field(min_length=4, max_length=500)
+    max_pages: int = Field(default=6, ge=1, le=25)
+    same_domain: bool = True
+
+
+class ImportItem(BaseModel):
+    """A single item the user wants to bring into the catalog/docs from a crawl."""
+    type: str = Field(pattern="^(product|document|note)$")
+    # For product
+    slug: Optional[str] = ""
+    name: Optional[str] = ""
+    desc: Optional[str] = ""
+    image: Optional[str] = ""
+    category: Optional[str] = "precision-gauges"
+    # For document
+    title: Optional[str] = ""
+    content: Optional[str] = ""
+    sourceUrl: Optional[str] = ""
+    autoTranslate: bool = True
+
+
+class WebImportRequest(BaseModel):
+    items: List[ImportItem] = Field(min_length=1, max_length=200)
+
+
+@api.post("/admin/web/crawl")
+async def admin_web_crawl(body: CrawlRequest, auth=Depends(require_user)):
+    """Crawl a URL + same-domain links. Owner / team can preview, then choose what to import."""
+    try:
+        pages = await crawl_site(body.url, max_pages=body.max_pages, same_domain_only=body.same_domain)
+        return {"ok": True, "url": body.url, "pages": pages, "count": len(pages)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.post("/admin/web/import")
+async def admin_web_import(body: WebImportRequest, auth=Depends(require_user)):
+    """Persist the items the user picked from a crawl preview into products / documents."""
+    created_products: List[dict] = []
+    created_docs: List[dict] = []
+    for it in body.items:
+        if it.type == "product":
+            if not it.name:
+                continue
+            slug = (it.slug or re.sub(r"[^a-z0-9]+", "-", it.name.lower())[:60].strip("-")) or new_uuid()[:10]
+            doc = {
+                "slug": slug,
+                "name": it.name.strip(),
+                "desc": it.desc or "",
+                "category": it.category or "precision-gauges",
+                "subcategory": "",
+                "image": it.image or "",
+                "specSheet": "",
+                "specSheetName": "",
+                "specs": {},
+                "features": [],
+                "leadTime": "2-4 weeks",
+                "badge": "precision",
+                "sourceUrl": it.sourceUrl or "",
+                "createdAt": now_iso(),
+                "updatedAt": now_iso(),
+            }
+            if it.autoTranslate and llm_configured():
+                try:
+                    doc["translations"] = await translate_fields(doc["name"], doc.get("desc") or "")
+                except Exception:
+                    pass
+            r = await db.products.insert_one(doc)
+            created_products.append({"id": str(r.inserted_id), "name": doc["name"], "slug": slug})
+        elif it.type in ("document", "note"):
+            doc = {
+                "title": it.title or it.name or "Imported note",
+                "type": "markdown",
+                "content": it.content or it.desc or "",
+                "sourceUrl": it.sourceUrl or "",
+                "createdBy": auth["sub"],
+                "createdAt": now_iso(),
+            }
+            r = await db.documents.insert_one(doc)
+            created_docs.append({"id": str(r.inserted_id), "title": doc["title"]})
+    return {"ok": True, "products": created_products, "documents": created_docs}
 
 
 # Legacy single-shot endpoint kept for the smoke test we already wrote

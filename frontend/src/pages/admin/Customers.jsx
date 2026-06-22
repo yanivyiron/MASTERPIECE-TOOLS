@@ -167,7 +167,7 @@ const AdminCustomers = () => {
               </div>
               <label className="flex items-center gap-2 text-sm text-neutral-300">
                 <input type="checkbox" checked={editing.blocked} onChange={(e) => setEditing({ ...editing, blocked: e.target.checked })} />
-                Blocked (won't receive emails / blasts)
+                Blocked (won&apos;t receive emails / blasts)
               </label>
             </div>
             <div className="border-t border-neutral-900 px-5 py-3 flex justify-end gap-2">

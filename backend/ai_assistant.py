@@ -108,8 +108,42 @@ def extract_attachment_text(name: str, mime: str, data_url: str) -> str:
         except Exception as e:
             logger.warning("PDF extract failed for %s: %s", name, e)
             return ""
-    # Images / binaries — we don't OCR yet; pass metadata only
+    # Images — Tesseract OCR for any embedded text
+    if lower_mime.startswith("image/") or lower_name.endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")):
+        try:
+            from io import BytesIO
+            from PIL import Image
+            import pytesseract
+            img = Image.open(BytesIO(raw))
+            text = (pytesseract.image_to_string(img) or "").strip()
+            return text[:8000] if text else "(Image — no text detected via OCR. The AI can also describe images visually on request.)"
+        except Exception as e:
+            logger.warning("OCR failed for %s: %s", name, e)
+            return ""
     return ""
+
+
+async def describe_image_with_vision(name: str, mime: str, data_url: str) -> str:
+    """Use Gemini 3 Flash via emergentintegrations to describe an image semantically.
+    Called only when the AI explicitly asks for visual understanding of an attached image."""
+    if not EMERGENT_LLM_KEY:
+        return ""
+    if not data_url:
+        return ""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        b64 = data_url.split(",", 1)[1] if data_url.startswith("data:") else data_url
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"mpt-vision-{name}",
+            system_message="You are a visual inspector for an industrial parts catalog. Describe the image in detail: object type, materials, surface finish, any visible measurements, markings, ISO codes, dimensions, part numbers. Be precise, technical, concise (≤220 words).",
+        ).with_model("gemini", "gemini-2.5-flash")
+        msg = UserMessage(text=f"Describe this image ({name}, {mime}). Transcribe any text/numbers exactly.",
+                          file_contents=[ImageContent(image_base64=b64)])
+        return await chat.send_message(msg)
+    except Exception as e:
+        logger.warning("Vision describe failed for %s: %s", name, e)
+        return ""
 
 
 # ============================================================
@@ -485,6 +519,32 @@ async def tool_search_web(_db, args: Dict[str, Any], **_) -> Dict[str, Any]:
 
 
 # ---- Internal restore tools used by undo ----
+async def tool_describe_image(_db, args: Dict[str, Any], **_) -> Dict[str, Any]:
+    """Vision-LLM description of an image previously attached this turn.
+    args = { name?: str, dataUrl?: str }  — when the AI receives an attachment list it can call this
+    to get a vision-LLM description if OCR alone wasn't enough."""
+    name = args.get("name") or "image"
+    mime = args.get("mime") or "image/png"
+    data_url = args.get("dataUrl") or args.get("data") or ""
+    if not data_url:
+        return {"ok": False, "error": "dataUrl is required"}
+    desc = await describe_image_with_vision(name, mime, data_url)
+    return {"ok": True, "description": desc or "(no description)"}
+
+
+async def tool_crawl_website(_db, args: Dict[str, Any], **_) -> Dict[str, Any]:
+    """Crawl a website and return a structured list of pages + extracted content."""
+    from web_importer import crawl_site
+    url = (args.get("url") or "").strip()
+    if not url:
+        return {"ok": False, "error": "url is required"}
+    try:
+        pages = await crawl_site(url, max_pages=int(args.get("max_pages", 6)), same_domain_only=bool(args.get("same_domain", True)))
+        return {"ok": True, "url": url, "pages": pages, "count": len(pages)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 async def tool_restore_product(db: AsyncIOMotorDatabase, args: Dict[str, Any], **_) -> Dict[str, Any]:
     snap = args.get("snapshot") or {}
     if not snap:
@@ -541,6 +601,8 @@ def make_tool_registry(db, perms: Dict[str, bool], send_email_fn, by_email: str)
         # Web
         "fetch_url": lambda a: tool_fetch_url(db, a),
         "search_web": lambda a: tool_search_web(db, a),
+        "crawl_website": lambda a: tool_crawl_website(db, a),
+        "describe_image": lambda a: tool_describe_image(db, a),
         # Internal restores (undo)
         "_restore_product": lambda a: tool_restore_product(db, a),
         "_restore_category": lambda a: tool_restore_category(db, a),
@@ -579,6 +641,8 @@ READ:
   • list_documents({ query?, limit? })           → AI-generated documents
   • search_web({ query })                        → top 5 search results (DuckDuckGo)
   • fetch_url({ url })                           → fetches a webpage and returns title + clean text
+  • crawl_website({ url, max_pages?, same_domain? })   → crawls up to N same-domain pages and returns {url,title,text,images,links} per page. Use this to bulk-import a competitor's catalog.
+  • describe_image({ name, mime, dataUrl })      → if a user attached an image and OCR returned little text, call this for a vision-LLM description.
 
 WRITE (all mutating tools auto-store an undo recipe):
   • update_settings({ patch:{…} })   Allowed keys ONLY:

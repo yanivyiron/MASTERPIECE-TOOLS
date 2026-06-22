@@ -110,6 +110,15 @@ export const api = {
   aiListDocuments: () => request('GET', '/admin/ai/documents', { auth: true }),
   aiGetDocument: (did) => request('GET', `/admin/ai/documents/${did}`, { auth: true }),
   aiDeleteDocument: (did) => request('DELETE', `/admin/ai/documents/${did}`, { auth: true }),
+
+  // Web importer
+  adminWebCrawl: (payload) => request('POST', '/admin/web/crawl', { body: payload, auth: true }),
+  adminWebImport: (payload) => request('POST', '/admin/web/import', { body: payload, auth: true }),
+
+  // Site overrides (visual CMS)
+  adminGetOverrides: () => request('GET', '/admin/site-overrides', { auth: true }),
+  adminPutOverride: (key, value) => request('PUT', '/admin/site-overrides', { body: { key, value }, auth: true }),
+  adminDeleteOverride: (key) => request('DELETE', `/admin/site-overrides/${encodeURIComponent(key)}`, { auth: true }),
 };
 
 export default api;

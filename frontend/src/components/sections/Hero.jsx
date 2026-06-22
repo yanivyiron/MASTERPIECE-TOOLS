@@ -5,6 +5,7 @@ import { ArrowRight, BadgeCheck, ChevronDown, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SITE_IMAGES, STATS } from '../../mock';
 import { AnimatedCounter } from '../animations';
+import EditableText from '../EditableText';
 
 const Hero = () => {
   const { t } = useLang();
@@ -43,32 +44,32 @@ const Hero = () => {
           {/* Floating badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-orange-500/40 bg-orange-500/5 text-orange-300 text-[11px] tracking-[0.2em] uppercase mb-7 backdrop-blur-sm animate-[badgePulse_3s_ease-in-out_infinite]">
             <BadgeCheck className="w-3.5 h-3.5" />
-            {t('hero.badge')}
+            <EditableText k="home.hero.badge" as="span">{t('hero.badge')}</EditableText>
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
           </div>
 
           <h1 className="text-white font-black tracking-tight leading-[0.92] text-[42px] sm:text-[58px] lg:text-[80px] xl:text-[88px] hyphens-auto break-words">
-            <span className="block opacity-95 animate-[slideInLeft_0.8s_ease-out_0.1s_both]">{t('hero.title1')}</span>
+            <EditableText k="home.hero.title1" as="span" className="block opacity-95 animate-[slideInLeft_0.8s_ease-out_0.1s_both]">{t('hero.title1')}</EditableText>
             <span className="block animate-[slideInLeft_0.8s_ease-out_0.3s_both]">
               <span className="relative inline-block max-w-full">
-                <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-orange-300 via-orange-500 to-orange-600">{t('hero.title2')}</span>
+                <EditableText k="home.hero.title2" as="span" className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-orange-300 via-orange-500 to-orange-600">{t('hero.title2')}</EditableText>
                 <Sparkles className="absolute -top-3 -right-8 w-6 h-6 text-orange-400 animate-[twinkle_2.5s_ease-in-out_infinite]" />
                 <span className="absolute -bottom-2 left-0 h-[8px] w-full bg-orange-500/30 blur-md" />
               </span>
             </span>
           </h1>
 
-          <p className="mt-7 text-neutral-300 text-base sm:text-lg max-w-xl leading-relaxed animate-[fadeIn_1s_ease-out_0.6s_both]">{t('hero.subtitle')}</p>
+          <EditableText k="home.hero.subtitle" as="p" className="mt-7 text-neutral-300 text-base sm:text-lg max-w-xl leading-relaxed animate-[fadeIn_1s_ease-out_0.6s_both]" multiline>{t('hero.subtitle')}</EditableText>
 
           <div className="mt-10 flex flex-wrap items-center gap-4 animate-[fadeIn_1s_ease-out_0.8s_both]">
             <Button asChild className="group relative bg-orange-500 hover:bg-orange-400 text-white rounded-none h-12 px-7 text-sm font-bold tracking-widest uppercase shadow-2xl shadow-orange-500/40 overflow-hidden">
               <Link to="/request-a-quote">
-                <span className="relative z-10 flex items-center">{t('hero.cta1')} <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" /></span>
+                <span className="relative z-10 flex items-center"><EditableText k="home.hero.cta1" as="span">{t('hero.cta1')}</EditableText> <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" /></span>
                 <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="border-neutral-700 hover:border-orange-500 hover:text-orange-400 bg-transparent text-white rounded-none h-12 px-7 text-sm font-bold tracking-widest uppercase backdrop-blur-sm">
-              <Link to="/products">{t('hero.cta2')}</Link>
+              <Link to="/products"><EditableText k="home.hero.cta2" as="span">{t('hero.cta2')}</EditableText></Link>
             </Button>
           </div>
 
@@ -111,9 +112,9 @@ const Hero = () => {
               <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 border-orange-500" />
 
               <div className="absolute bottom-6 left-6 right-6">
-                <div className="text-[11px] tracking-[0.25em] text-orange-400 uppercase font-bold">{t('hero.featured')}</div>
-                <div className="mt-1 text-white font-bold text-xl">{t('hero.featuredTitle')}</div>
-                <div className="text-neutral-300 text-sm mt-1">{t('hero.featuredSub')}</div>
+                <div className="text-[11px] tracking-[0.25em] text-orange-400 uppercase font-bold"><EditableText k="home.hero.featured" as="span">{t('hero.featured')}</EditableText></div>
+                <div className="mt-1 text-white font-bold text-xl"><EditableText k="home.hero.featuredTitle" as="span">{t('hero.featuredTitle')}</EditableText></div>
+                <div className="text-neutral-300 text-sm mt-1"><EditableText k="home.hero.featuredSub" as="span">{t('hero.featuredSub')}</EditableText></div>
               </div>
             </div>
           </div>

@@ -60,6 +60,10 @@ export const SITE_CONFIG_DEFAULTS = {
   // Per-product overrides + admin-added custom products
   productOverrides: {},
   customProducts: [],
+
+  // Wix-like visual editor — every editable text/image on the public site is stored here
+  // under a stable key (e.g. "home.hero.eyebrow", "footer.legal").
+  site_overrides: {},
 };
 
 const SiteConfigContext = createContext({
@@ -72,6 +76,12 @@ const SiteConfigContext = createContext({
   saveToServer: async () => {},
   hydrating: false,
   serverSynced: false,
+  // Visual editor
+  text: (key, fallback) => fallback,
+  setOverride: async () => {},
+  resetOverride: async () => {},
+  editMode: false,
+  setEditMode: () => {},
 });
 
 const readLocal = () => {
@@ -85,6 +95,14 @@ export const SiteConfigProvider = ({ children }) => {
   const [config, setConfig] = useState(() => ({ ...SITE_CONFIG_DEFAULTS, ...(readLocal() || {}) }));
   const [hydrating, setHydrating] = useState(true);
   const [serverSynced, setServerSynced] = useState(false);
+  const [editMode, setEditMode] = useState(() => {
+    try { return localStorage.getItem('mpt_edit_mode') === '1'; } catch { return false; }
+  });
+
+  // Keep editMode in sync with localStorage
+  useEffect(() => {
+    try { localStorage.setItem('mpt_edit_mode', editMode ? '1' : '0'); } catch { /* ignore */ }
+  }, [editMode]);
 
   // Hydrate from backend on boot (overrides cached values)
   useEffect(() => {
@@ -139,7 +157,28 @@ export const SiteConfigProvider = ({ children }) => {
     saveToServer,
     hydrating,
     serverSynced,
-  }), [config, hydrating, serverSynced, saveToServer]);
+    // ---- Visual editor (Wix-like) ----
+    text: (key, fallback) => {
+      const ov = config.site_overrides || {};
+      const v = ov[key];
+      return (v === undefined || v === null || v === '') ? fallback : v;
+    },
+    setOverride: async (key, value) => {
+      // Optimistic local update
+      setConfig((c) => ({ ...c, site_overrides: { ...(c.site_overrides || {}), [key]: value } }));
+      try { await api.adminPutOverride(key, value); } catch (e) { console.warn('Override save failed:', e?.message); }
+    },
+    resetOverride: async (key) => {
+      setConfig((c) => {
+        const next = { ...(c.site_overrides || {}) };
+        delete next[key];
+        return { ...c, site_overrides: next };
+      });
+      try { await api.adminDeleteOverride(key); } catch (e) { console.warn('Override reset failed:', e?.message); }
+    },
+    editMode,
+    setEditMode,
+  }), [config, hydrating, serverSynced, saveToServer, editMode]);
 
   return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
 };

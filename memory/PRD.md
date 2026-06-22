@@ -136,7 +136,31 @@
 ├── AiStudio.jsx       Full conversational chat UI for the panel AI
 ```
 
-## Phase 5 — Owner Panel Frontend (✅ COMPLETE — Feb 2026)
+## Phase 6 — Production-ready polish (✅ COMPLETE — Feb 2026)
+
+### Wix-like visual editor (live on the public site)
+- `SiteConfigContext.text(key, fallback)` + `setOverride/resetOverride` API.
+- `<EditableText k="..." as="h1">…</EditableText>` wrapper for any block.
+- `<FloatingEditToggle />` floats at bottom-left **only when an admin is logged in** and only on PUBLIC pages — pressing it turns on dashed outlines + pencil icons next to every editable text.
+- Double-click any block (or pencil) → inline editor → Save → `PUT /api/admin/site-overrides` → MongoDB → propagates to all visitors instantly.
+- Reset-to-default per block (orange "Reset" button).
+- Already wired into Hero (badge, title1/2, subtitle, both CTAs, feature card text), CallToAction (title + desc), MicronPrecision (eyebrow + title), PrecisionShowcase (eyebrow + 2-line title). Adding more blocks is just `<EditableText k="key">…</EditableText>` — no schema migration needed.
+
+### Web Importer + AI crawl
+- `/admin/import` page: paste any URL → crawl same-domain pages (configurable depth, capped at 25) → see a tree with checkboxes per page / heading / image → pick what you want → "Import as products" or "Import as documents" (auto-translated, slug generated).
+- AI tool `crawl_website({url, max_pages?, same_domain?})` so the assistant can also pull catalogs into the DB.
+- Backend module `web_importer.py` does polite HTTP-only crawling (no JS execution), parses titles/headings/images/links, returns clean text.
+
+### AI vision (OCR + LLM)
+- **Tesseract OCR** built-in for every uploaded image — text extracted automatically and fed into the AI prompt.
+- **Vision LLM fallback**: new tool `describe_image({name, mime, dataUrl})` uses Gemini 2.5 Flash via Emergent Universal Key for semantic description (materials, surface finish, ISO codes, dimensions) when OCR returns little text.
+- All three of pypdf / pytesseract / Pillow are now in `requirements.txt`.
+
+### Site overrides API (Wix engine)
+- `GET  /api/admin/site-overrides` → current map.
+- `PUT  /api/admin/site-overrides` `{key, value}` → upsert.
+- `DELETE /api/admin/site-overrides/{key}` → reset to default.
+- Public `/api/settings` returns the `site_overrides` map so unauthenticated visitors see the same edits.
 - `/admin/categories` — full CRUD UI with auto-translation toggle.
 - `/admin/team` — owner-only Team & permissions page with per-resource permission checkboxes (`quotes.edit`, `products.delete`, …); invite flow + delete.
 - `/admin/templates` — email template builder with live HTML preview, multiple kinds (custom / reply / rfq_owner / rfq_customer / newsletter).

@@ -4,6 +4,7 @@ import { useLang } from '../../context/LanguageContext';
 import { Button } from '../ui/button';
 import { ArrowRight, MessageSquare } from 'lucide-react';
 import { Marquee } from '../animations';
+import EditableText from '../EditableText';
 
 export const CallToAction = () => {
   const { t } = useLang();
@@ -15,8 +16,8 @@ export const CallToAction = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,107,26,0.15),transparent_60%)]" />
       </div>
       <div className="relative max-w-3xl mx-auto px-6 text-center">
-        <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight">{t('section.needQuote')}</h2>
-        <p className="text-neutral-300 mt-5 text-base sm:text-lg">{t('section.needQuoteDesc')}</p>
+        <EditableText k="home.cta.title" as="h2" className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight">{t('section.needQuote')}</EditableText>
+        <EditableText k="home.cta.desc" as="p" className="text-neutral-300 mt-5 text-base sm:text-lg" multiline>{t('section.needQuoteDesc')}</EditableText>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
           <Button asChild className="bg-orange-500 hover:bg-orange-400 rounded-none h-12 px-7 text-sm font-semibold tracking-widest uppercase shadow-xl shadow-orange-500/40">
             <Link to="/request-a-quote">{t('hero.cta1')} <ArrowRight className="w-4 h-4 ml-2" /></Link>
@@ -62,8 +63,8 @@ export const MicronPrecision = () => {
     <section className="bg-black py-20 lg:py-28">
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="max-w-2xl mb-12">
-          <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.micronTitle')}</div>
-          <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase">{t('section.micronTitle')}</h2>
+          <EditableText k="home.micron.eyebrow" as="div" className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.micronTitle')}</EditableText>
+          <EditableText k="home.micron.title" as="h2" className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase">{t('section.micronTitle')}</EditableText>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {items.map((it, i) => (
@@ -100,8 +101,11 @@ export const PrecisionShowcase = () => {
           </div>
         </div>
         <div className="lg:col-span-6">
-          <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.aeroGrade')}</div>
-          <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase leading-[1.05]">{t('section.aeroPrecisionTitle')}<br/>{t('section.aeroPrecisionTitle2')}</h2>
+          <EditableText k="home.showcase.eyebrow" as="div" className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.aeroGrade')}</EditableText>
+          <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase leading-[1.05]">
+            <EditableText k="home.showcase.title1" as="span">{t('section.aeroPrecisionTitle')}</EditableText><br/>
+            <EditableText k="home.showcase.title2" as="span">{t('section.aeroPrecisionTitle2')}</EditableText>
+          </h2>
           <ul className="mt-8 space-y-5">
             <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">{t('section.tolBullet')}</p><p className="text-neutral-400 text-sm mt-1">{t('section.tolBulletDesc')}</p></li>
             <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">{t('section.isoBullet')}</p><p className="text-neutral-400 text-sm mt-1">{t('section.isoBulletDesc')}</p></li>

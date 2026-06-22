@@ -12,6 +12,7 @@ import Footer from './components/layout/Footer';
 import BasketDrawer from './components/BasketDrawer';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import FloatingLanguageSwitcher from './components/FloatingLanguageSwitcher';
+import FloatingEditToggle from './components/FloatingEditToggle';
 import { ScrollProgress } from './components/animations';
 import { Toaster } from './components/ui/toaster';
 
@@ -34,6 +35,7 @@ import AdminCategories from './pages/admin/Categories';
 import AdminTeam from './pages/admin/Team';
 import AdminEmailTemplates from './pages/admin/EmailTemplates';
 import AdminEmailBlast from './pages/admin/EmailBlast';
+import AdminWebImport from './pages/admin/WebImport';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -62,6 +64,7 @@ const PublicShell = ({ children }) => (
     <BasketDrawer />
     <FloatingWhatsApp />
     <FloatingLanguageSwitcher />
+    <FloatingEditToggle />
   </>
 );
 
@@ -93,6 +96,7 @@ const AnimatedRoutes = () => {
           <Route path="team" element={<AdminTeam />} />
           <Route path="templates" element={<AdminEmailTemplates />} />
           <Route path="blast" element={<AdminEmailBlast />} />
+          <Route path="import" element={<AdminWebImport />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

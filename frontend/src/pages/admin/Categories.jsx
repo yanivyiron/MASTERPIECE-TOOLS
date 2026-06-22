@@ -91,7 +91,7 @@ const AdminCategories = () => {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={6} className="p-8 text-center text-neutral-500">No categories yet. Press "New category".</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-neutral-500">No categories yet. Press &quot;New category&quot;.</td></tr>
               )}
               {rows.map((c) => (
                 <tr key={c.id} className="border-t border-neutral-900 hover:bg-neutral-950/60" data-testid={`admin-cat-row-${c.slug}`}>
