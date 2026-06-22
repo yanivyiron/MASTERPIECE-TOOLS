@@ -8,7 +8,7 @@ import { useSiteConfig } from '../context/SiteConfigContext';
  * which writes to the same `site_overrides` store. This component just looks
  * up the current value (override or fallback) and renders it.
  */
-const EditableText = ({ k, as: Tag = 'span', children, className = '', ...rest }) => {
+const EditableText = ({ k, as: Tag = 'span', children, className = '', multiline: _multiline, ...rest }) => {
   const { text } = useSiteConfig();
   const fallback = typeof children === 'string'
     ? children

@@ -170,6 +170,14 @@
 - **AI Studio file upload** — paperclip button in the composer accepts PDF / text / CSV / JSON / HTML / images (up to 8 MB total); backend extracts text (via `pypdf`) and feeds it to the model so the AI can answer questions about the file.
 - **RFQ form file attachments** are now actually base64-encoded and sent (under 8 MB cap) — visible in the admin Quotes detail pane.
 
+## Phase 7 — Post-launch operability (✅ COMPLETE — Feb 2026)
+- **Analytics & tracking pixels** — `/admin/settings` exposes GA4 ID, GTM ID, Meta Pixel, LinkedIn Insight Partner ID and a raw `<head>` HTML escape hatch. `<AnalyticsScripts/>` injects them on the public site only (skips `/admin/*`).
+- **One-click test-data wipe** — `/api/admin/db/wipe-test-data` (owner-only) clears `quotes`, `customer_overrides`, `ai_conversations`, `customer_emails`; preserves settings/products/categories/templates/team/documents/ai_actions/site_overrides. Triggered from Settings → Data Maintenance.
+- **Email template UX redesign** — tutorial banner, 4 quick-start templates (Welcome / Quote reply / Follow-up / Newsletter), placeholder palette (`{{firstName}}`, `{{lastName}}`, `{{email}}`, `{{company}}`, `{{quoteId}}`, `{{message}}`) that insert at the textarea cursor.
+- **Customer email modal** — shrunk to `max-w-xl`, added template selector + attachment picker (25 MB cap, multi-file).
+- **Quote reply** — template selector + attachment picker; backend `QuoteReply` now accepts `{attachments, templateId}` and persists attachment count per reply.
+- **Wix-style floating editor removed** — `FloatingEditToggle` deleted from the public site. Editing now lives entirely inside `/admin/content` (Site Content), grouped into 5 sections × 20 keys with input + save + reset per field. `EditableText` is now a thin read-only renderer.
+
 ## Bugs fixed in this batch
 - **Settings nested-data accumulation**: `PUT /api/admin/settings` now recursively unwraps `{data:{data:{...}}}` before storing. New `POST /api/admin/settings/repair` (owner-only) one-shot maintenance endpoint.
 - **`/api/admin/customers/{email}/email`**: now uses a new `SingleEmailRequest` schema (no `recipients` required, since the URL already names the recipient).
