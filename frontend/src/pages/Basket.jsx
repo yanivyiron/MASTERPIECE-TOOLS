@@ -6,6 +6,7 @@ import { useLang } from '../context/LanguageContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Trash2, Plus, Minus, ShoppingBasket, ArrowRight, ChevronLeft } from 'lucide-react';
+import { productName } from '../hooks/useResolvedProducts';
 
 const Basket = () => {
   const { t } = useLang();
@@ -39,10 +40,10 @@ const Basket = () => {
             <div className="lg:col-span-8 space-y-3">
               {items.map(it => (
                 <div key={it.id} className="flex gap-4 p-4 border border-neutral-900 bg-neutral-950">
-                  <img src={it.image} alt={t(it.nameKey)} className="w-24 h-24 sm:w-28 sm:h-28 object-contain p-2 bg-gradient-to-br from-neutral-900 to-black border border-neutral-800" />
+                  <img src={it.image} alt={productName(it, t)} className="w-24 h-24 sm:w-28 sm:h-28 object-contain p-2 bg-gradient-to-br from-neutral-900 to-black border border-neutral-800" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                      <Link to={`/product/${it.slug}`} className="text-white font-bold uppercase tracking-wide hover:text-orange-500">{t(it.nameKey)}</Link>
+                      <Link to={`/product/${it.slug}`} className="text-white font-bold uppercase tracking-wide hover:text-orange-500">{productName(it, t)}</Link>
                       <button onClick={() => removeItem(it.id)} aria-label="Remove" className="text-neutral-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                     </div>
                     <Input value={it.notes || ''} onChange={(e) => updateNotes(it.id, e.target.value)} placeholder={t('basket.notes')} className="mt-2 bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-600 text-sm h-9 focus-visible:ring-orange-500" />

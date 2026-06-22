@@ -1,22 +1,41 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import Hero from '../components/sections/Hero';
 import Features from '../components/sections/Features';
 import ProductGrid from '../components/sections/ProductGrid';
 import { ProcessSection, IndustriesSection, StrategicSection } from '../components/sections/Pillars';
 import { CallToAction, TrustedClients, MicronPrecision, PrecisionShowcase } from '../components/sections/CTA';
 import { useLang } from '../context/LanguageContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
+import SEO from '../components/SEO';
 
 const Home = () => {
   const { t } = useLang();
+  const { config } = useSiteConfig();
+
+  // Organization + Website structured data
+  const ldOrg = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: config.companyName,
+    url: config.websiteUrl,
+    logo: config.logoImageDataUrl || `${config.websiteUrl}/logo.png`,
+    address: { '@type': 'PostalAddress', streetAddress: config.companyAddress },
+    contactPoint: [{ '@type': 'ContactPoint', telephone: config.contactPhone, contactType: 'sales', email: config.contactEmail, areaServed: 'EU' }],
+    sameAs: [config.linkedinUrl].filter(Boolean),
+  };
+  const ldWebsite = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    url: config.websiteUrl,
+    name: config.companyName,
+    inLanguage: ['en', 'nl', 'de', 'fr', 'pt'],
+  };
+
   return (
     <>
-      <Helmet>
-        <title>Masterpiece Tools — Aerospace-Grade Precision Gauges & Custom Cutting Tools</title>
-        <meta name="description" content="ISO-certified precision gauges and custom carbide cutting tools for aerospace, defense and advanced manufacturing. European supply with full traceability and 24-48h RFQ response." />
-        <meta property="og:title" content="Masterpiece Tools — Aerospace-Grade Precision Gauges" />
-        <meta property="og:description" content="ISO-certified precision gauges and custom cutting tools for mission-critical aerospace applications." />
-      </Helmet>
+      <SEO path="/" />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldOrg) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldWebsite) }} />
       <Hero />
       <TrustedClients />
       <PrecisionShowcase />

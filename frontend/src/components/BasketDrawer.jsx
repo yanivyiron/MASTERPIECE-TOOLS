@@ -6,6 +6,7 @@ import { useLang } from '../context/LanguageContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Minus, Plus, Trash2, ShoppingBasket } from 'lucide-react';
+import { productName } from '../hooks/useResolvedProducts';
 
 const BasketDrawer = () => {
   const { items, updateQty, updateNotes, removeItem, drawerOpen, setDrawerOpen, count } = useBasket();
@@ -41,10 +42,10 @@ const BasketDrawer = () => {
             <div className="p-5 space-y-4">
               {items.map((it) => (
                 <div key={it.id} className="flex gap-3 p-3 bg-neutral-900/50 border border-neutral-800 rounded">
-                  <img src={it.image} alt={t(it.nameKey)} className="w-20 h-20 object-contain p-1 rounded bg-gradient-to-br from-neutral-900 to-black border border-neutral-800" />
+                  <img src={it.image} alt={productName(it, t)} className="w-20 h-20 object-contain p-1 rounded bg-gradient-to-br from-neutral-900 to-black border border-neutral-800" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="text-sm font-semibold text-white truncate">{t(it.nameKey)}</div>
+                      <div className="text-sm font-semibold text-white truncate">{productName(it, t)}</div>
                       <button onClick={() => removeItem(it.id)} aria-label="Remove" className="text-neutral-500 hover:text-red-400">
                         <Trash2 className="w-4 h-4" />
                       </button>

@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 3 frontend-only verification of: (i) 5-language translations across home/products/product-detail/about/RFQ, (ii) searchable country combobox on /request-a-quote, (iii) admin Settings (8 sections + logo upload + Allowed-Countries grid with 196 countries), (iv) admin Products (18 base products + image/PDF upload + Custom-Product CRUD), (v) SEO (hreflang x5 + og + ld+json Organization/WebSite/Product), (vi) static robots.txt + sitemap.xml, (vii) regression smoke (WhatsApp, header LinkedIn, PDF modal). 23 of 25 checks PASS. Two MINOR English-text leaks found in shared Footer + CTA components that bypass the t() pipeline (hardcoded strings, not in translations.js).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Footer (global, all pages)", "issues": ["Line 64 of Footer.jsx hardcodes English string 'European Supply • ISO Certified • Aerospace Approved' — not piped through t(). Visible in NL/DE/FR/PT footer. Move into translations.js (e.g. footer.tagline) for all 5 langs.", "Line 57 of Footer.jsx hardcodes 'RFQ response {time}' — should use t('footer.rfqResponse') across 5 langs."]},
+      {"screen": "Home CTA section", "issues": ["CTA.jsx hardcodes 'Absolute Sub-Micron Tolerances' and 'for mission-critical aerospace components' as <p> text — visible in all non-English routes. Pipe through t() for nl/de/fr/pt."]}
+    ]
+  },
+  "verified_features": [
+    {"feature": "Language switch NL/DE/FR/PT", "evidence": "document.documentElement.lang correctly flips to nl/de/fr/pt after localStorage('mpt_lang'). Home/Products/About/RFQ/ProductDetail main content (hero, pillars, process, RFQ steps, sidebar, country picker label, product specs labels) all show localized text. Hero h1 PT renders 'Grau Aeroespacial / Calibres de Precisão'. No English leaks in hero/header/nav/RFQ form labels/admin nav.", "status": "PASS"},
+    {"feature": "Country combobox /request-a-quote", "evidence": "data-testid='country-combobox-trigger' visible. Click → 'country-combobox-popup' opens with search input. Typing 'port' filters to only 'country-option-PT'. Clicking PT sets trigger text to 'Portugal' and reveals 'country-combobox-clear' (X) button. Click clear → trigger resets to localized placeholder.", "status": "PASS"},
+    {"feature": "Admin Settings 8 sections + logo persistence", "evidence": "/admin/settings renders <title>Settings — Owner Panel</title>. All 8 sections present: settings-brand, settings-company, settings-whatsapp, settings-seo, settings-domain, settings-countries, settings-email (2 elements — both header+section), settings-notifications. settings-logo-text + settings-logo-upload present. Changing logo-text to 'Acme Co' → Save → home header visibly displays 'Acme Co' (screenshot confirmed) sourced from localStorage mpt_site_config.logoText.", "status": "PASS"},
+    {"feature": "Allowed Countries grid (196 countries)", "evidence": "settings-countries-search input filters chips. Initial badge: 'Currently allowing ALL 196 countries'. Search 'germ' → only settings-country-DE visible. Click DE → 'Allowing 1 of 196 countries'. Click settings-countries-eu → 'Allowing 19 of 196 countries' (matches EU+UK+EFTA list). Click settings-countries-all → 'Currently allowing ALL 196 countries'. Note: review_request said ~195, actual data has 196 (includes XK Kosovo) — acceptable.", "status": "PASS"},
+    {"feature": "Admin Products CRUD UI", "evidence": "/admin/products lists 18 base products. Each has admin-product-<id> + admin-product-edit-<id>. admin-products-new button present. Click Edit on p1 → dialog opens with admin-product-image-input (1), admin-product-pdf-input (1), admin-product-pdf-btn (1), admin-product-save (1). Click New Product → same fields all present + empty form.", "status": "PASS"},
+    {"feature": "SEO meta on home", "evidence": "<html lang> flips to nl/de/fr/pt; <link rel=alternate hreflang> present for [en, nl, de, fr, pt, x-default]; <meta property=og:title|og:description|og:image> populated; <meta name=twitter:card>='summary_large_image'; 3 application/ld+json scripts on home (Organization + WebSite + 1 more).", "status": "PASS"},
+    {"feature": "SEO on product detail", "evidence": "/product/metric-size-plug emits 2 ld+json blocks, one of which contains '\"Product\"' (Product structured data with name/description/image).", "status": "PASS"},
+    {"feature": "Static robots.txt + sitemap.xml", "evidence": "GET /robots.txt → 200, contains 'Disallow: /admin' and 'Disallow: /admin/'. GET /sitemap.xml → 200, valid <urlset> with 23 <url> entries (home + about + products + 2 categories + RFQ + 18 product slugs) and hreflang alternates for en/nl/de/fr/pt/x-default on home entry.", "status": "PASS"},
+    {"feature": "Regression smoke", "evidence": "floating-whatsapp-btn count=1 on product page; header-linkedin count=1; product-view-pdf-btn opens pdf-modal=true; Escape closes; page transitions smooth.", "status": "PASS"}
+  ],
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "action_items": [
+    "MINOR-i18n: Footer.jsx — extract two hardcoded English strings: line 64 'European Supply • ISO Certified • Aerospace Approved' and line 57 'RFQ response {time}'. Add new keys (e.g. footer.tagline, footer.rfqResponseLabel) to translations.js for all 5 languages.",
+    "MINOR-i18n: CTA.jsx — extract hardcoded 'Absolute Sub-Micron Tolerances' + 'for mission-critical aerospace components' (and likely sibling list items in the same <ul>) to translations.js for all 5 languages.",
+    "MINOR-i18n: Admin product dialog labels (admin/Products.jsx) are in English ('Tolerance', 'Material', etc.) — acceptable for admin panel but flag if user wants admin localized too."
+  ],
+  "critical_code_review_comments": [
+    "Settings.jsx countries section was missing two test ids: settings-countries-search (on search Input) and settings-countries-count (on the badge displaying 'Allowing X of N countries'). Added both data-testids — test selectors now work as documented in review_request.",
+    "Country data file has 196 entries (includes Kosovo XK) where review_request mentions ~195 — verify with product owner whether Kosovo/Taiwan/etc. should be included by default.",
+    "Footer + CTA components do not import useLanguage()/t() — these were missed during the i18n sweep. Easy fix: import useLanguage, replace literals with t('footer.tagline')."
+  ],
+  "updated_files": ["/app/frontend/src/pages/admin/Settings.jsx (added data-testid settings-countries-search + settings-countries-count)"],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "92% (23/25 checks — 2 minor i18n leaks remain)"},
+  "test_credentials": "Admin localStorage bypass: localStorage.setItem('mpt_admin_session', JSON.stringify({email:'admin@masterpiece-tools.com', name:'Yaniv (Owner)', role:'owner', loginAt: new Date().toISOString()})). Confirmed working — /admin/settings + /admin/products both load directly.",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 7 of the 8 major review_request items (translations, country combobox, admin settings, admin products, SEO, static files, smoke regression) are GREEN. Two MINOR English-text leaks found in Footer.jsx (line 64 + line 57) and CTA.jsx — these are NOT in translations.js and bypass t(). Easy 5-min fix for E1 once new translation keys added. Two missing test ids added by me (settings-countries-search, settings-countries-count). Country grid has 196 entries not 195 — confirm with PO. Logo persistence verified end-to-end via localStorage round-trip (mpt_site_config.logoText → header). PT/DE/FR/NL hero+nav+RFQ all render localized text correctly. Ready for backend Phase 2."
+}

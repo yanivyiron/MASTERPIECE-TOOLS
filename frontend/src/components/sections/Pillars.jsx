@@ -32,9 +32,9 @@ export const ProcessSection = () => {
         <div className="flex items-end justify-between mb-12 gap-6 flex-wrap">
           <div>
             <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.process')}</div>
-            <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-[1.05]">From concept<br/>to verification.</h2>
+            <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-[1.05]">{t('section.fromConcept')}<br/>{t('section.toVerification')}</h2>
           </div>
-          <div className="text-neutral-400 text-sm max-w-md">A streamlined 6-step process that ensures every part meets aerospace and defense compliance — with rapid European turn-around.</div>
+          <div className="text-neutral-400 text-sm max-w-md">{t('section.processDesc')}</div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {PROCESS_STEPS.map((s, i) => <StepCard key={s.num} s={s} i={i} t={t} />)}

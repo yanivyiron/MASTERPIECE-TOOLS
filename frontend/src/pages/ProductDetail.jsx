@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { PRODUCTS } from '../mock';
 import { useLang } from '../context/LanguageContext';
 import { useBasket } from '../context/BasketContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Plus, Minus, ShoppingBasket, BadgeCheck, ChevronLeft, Award, Truck, FileText, Download } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import PdfViewerModal from '../components/PdfViewerModal';
+import SEO from '../components/SEO';
 import { toast } from '../hooks/use-toast';
+import { useResolvedProducts, useResolvedProduct, productName, productDesc } from '../hooks/useResolvedProducts';
 
 const ProductDetail = () => {
   const { slug } = useParams();
   const { t } = useLang();
   const { addItem } = useBasket();
+  const { config } = useSiteConfig();
   const navigate = useNavigate();
-  const product = PRODUCTS.find(p => p.slug === slug);
+  const product = useResolvedProduct(slug);
+  const allProducts = useResolvedProducts();
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState('');
   const [adding, setAdding] = useState(false);
@@ -25,33 +29,51 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="bg-black min-h-screen py-32 text-center text-white">
-        <h1 className="text-3xl font-bold">Product not found</h1>
-        <Link to="/products" className="text-orange-500 mt-4 inline-block hover:underline">Browse all products</Link>
+        <h1 className="text-3xl font-bold">{t('pd.notFound')}</h1>
+        <Link to="/products" className="text-orange-500 mt-4 inline-block hover:underline">{t('btn.browseProducts')}</Link>
       </div>
     );
   }
 
-  const related = PRODUCTS.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+  const related = allProducts.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
 
   const handleAdd = () => {
     addItem(product, qty, notes);
     setAdding(true);
-    toast({ title: `${t(product.nameKey)} — ${t('btn.added')}`, description: `${qty} × ${t(product.nameKey)}` });
+    toast({ title: `${productName(product, t)} — ${t('btn.added')}`, description: `${qty} × ${productName(product, t)}` });
     setTimeout(() => setAdding(false), 1500);
   };
 
   const handleQuote = () => { addItem(product, qty, notes); navigate('/request-a-quote'); };
 
+  const productLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: productName(product, t),
+    description: productDesc(product, t),
+    image: product.image,
+    brand: { '@type': 'Brand', name: config.companyName },
+    sku: product.id,
+    category: product.category,
+    offers: { '@type': 'Offer', availability: 'https://schema.org/InStock', priceCurrency: 'EUR', price: '0', priceSpecification: { '@type': 'PriceSpecification', valueAddedTaxIncluded: false }, url: `${config.websiteUrl}/product/${product.slug}` },
+  };
+
   return (
     <div className="bg-black min-h-screen">
+      <SEO
+        title={`${productName(product, t)} — ${config.companyName}`}
+        description={productDesc(product, t)}
+        image={product.image}
+        type="product"
+        path={`/product/${product.slug}`}
+      />
       <Helmet>
-        <title>{`${t(product.nameKey)} — Masterpiece Tools`}</title>
-        <meta name="description" content={t(product.descKey)} />
+        <script type="application/ld+json">{JSON.stringify(productLd)}</script>
       </Helmet>
 
       <div className="max-w-[1400px] mx-auto px-6 pt-8">
         <Link to="/products" className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-orange-500">
-          <ChevronLeft className="w-4 h-4" /> Back to catalog
+          <ChevronLeft className="w-4 h-4" /> {t('btn.backToCatalog')}
         </Link>
       </div>
 
@@ -60,7 +82,7 @@ const ProductDetail = () => {
           <div className="relative aspect-square border border-neutral-900 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black overflow-hidden group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,107,26,0.18),transparent_55%)]" />
             <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-[size:32px_32px]" />
-            <img src={product.image} alt={t(product.nameKey)} className="absolute inset-0 w-full h-full object-contain p-12 transition-transform duration-700 group-hover:scale-105 drop-shadow-[0_25px_35px_rgba(0,0,0,0.5)]" />
+            <img src={product.image} alt={productName(product, t)} className="absolute inset-0 w-full h-full object-contain p-12 transition-transform duration-700 group-hover:scale-105 drop-shadow-[0_25px_35px_rgba(0,0,0,0.5)]" />
             {/* Corner brackets */}
             <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-orange-500" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-orange-500" />
@@ -88,8 +110,8 @@ const ProductDetail = () => {
 
         <div>
           <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{product.specs?.standard}</div>
-          <h1 className="text-white font-black text-3xl sm:text-4xl tracking-tight uppercase">{t(product.nameKey)}</h1>
-          <p className="text-neutral-300 mt-5 text-base leading-relaxed">{t(product.descKey)}</p>
+          <h1 className="text-white font-black text-3xl sm:text-4xl tracking-tight uppercase">{productName(product, t)}</h1>
+          <p className="text-neutral-300 mt-5 text-base leading-relaxed">{productDesc(product, t)}</p>
 
           <div className="mt-7 grid grid-cols-2 gap-3">
             {Object.entries(product.specs || {}).map(([k, v]) => (
@@ -111,7 +133,7 @@ const ProductDetail = () => {
 
           <div className="mt-4">
             <label className="text-xs uppercase tracking-widest text-neutral-500">{t('basket.notes')}</label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. M12x1.5 6H, GO/NOGO pair, ISO 17025 certificate required" className="mt-2 bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-500 focus-visible:ring-orange-500 min-h-[90px]" />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('pd.notesPlaceholder')} className="mt-2 bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-500 focus-visible:ring-orange-500 min-h-[90px]" />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -133,7 +155,7 @@ const ProductDetail = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] tracking-[0.25em] text-orange-500 uppercase font-semibold">{t('pdf.title')}</div>
-                  <div className="text-white text-sm font-semibold truncate">{t(product.nameKey)}</div>
+                  <div className="text-white text-sm font-semibold truncate">{productName(product, t)}</div>
                   <div className="text-[11px] text-neutral-500 mt-0.5">{t('btn.viewSpecs')}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -158,9 +180,9 @@ const ProductDetail = () => {
           )}
 
           <div className="mt-8 border-t border-neutral-900 pt-6 grid grid-cols-3 gap-4">
-            <div className="flex items-start gap-2"><Award className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">ISO Certified</div>Traceable calibration</div></div>
-            <div className="flex items-start gap-2"><Truck className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">EU Logistics</div>{product.leadTime}</div></div>
-            <div className="flex items-start gap-2"><FileText className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">Custom Drawing</div>RFQ in 24-48h</div></div>
+            <div className="flex items-start gap-2"><Award className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">{t('pd.isoCertified')}</div>{t('pd.traceable')}</div></div>
+            <div className="flex items-start gap-2"><Truck className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">{t('pd.euLogistics')}</div>{product.leadTime}</div></div>
+            <div className="flex items-start gap-2"><FileText className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">{t('pd.customDrawing')}</div>{t('pd.rfqIn')}</div></div>
           </div>
         </div>
       </div>
@@ -168,8 +190,8 @@ const ProductDetail = () => {
       {related.length > 0 && (
         <div className="max-w-[1400px] mx-auto px-6 pb-20">
           <div className="flex items-end justify-between mb-8">
-            <h2 className="text-white font-bold text-2xl uppercase tracking-wide">Related Products</h2>
-            <Link to="/products" className="text-sm text-orange-500 hover:underline tracking-widest uppercase">View All</Link>
+            <h2 className="text-white font-bold text-2xl uppercase tracking-wide">{t('pd.related')}</h2>
+            <Link to="/products" className="text-sm text-orange-500 hover:underline tracking-widest uppercase">{t('btn.viewAll')}</Link>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {related.map(p => <ProductCard key={p.id} product={p} />)}
@@ -182,7 +204,7 @@ const ProductDetail = () => {
           open={pdfOpen}
           onClose={() => setPdfOpen(false)}
           src={product.specSheet}
-          title={t(product.nameKey)}
+          title={productName(product, t)}
         />
       )}
     </div>

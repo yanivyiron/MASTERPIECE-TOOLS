@@ -1,15 +1,17 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useLang } from '../context/LanguageContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
 import { CallToAction } from '../components/sections/CTA';
 import { ProcessSection, IndustriesSection } from '../components/sections/Pillars';
 import Features from '../components/sections/Features';
+import SEO from '../components/SEO';
 
 const About = () => {
   const { t } = useLang();
+  const { config } = useSiteConfig();
   return (
     <div className="bg-black min-h-screen">
-      <Helmet><title>{`${t('about.title')} — Masterpiece Tools`}</title></Helmet>
+      <SEO title={`${t('about.title')} — ${config.companyName}`} description={t('about.lead')} path="/about" />
 
       <div className="relative border-b border-neutral-900 overflow-hidden">
         <div className="absolute inset-0">
@@ -30,29 +32,29 @@ const About = () => {
 
           {/* Company details card */}
           <div className="mt-8 border border-neutral-800 bg-neutral-950 p-6 space-y-3">
-            <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-bold">Company Information</div>
+            <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-bold">{t('about.companyInfo')}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 text-sm">
               <div>
-                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Legal Entity</div>
-                <div className="text-white mt-1">Masterpiece Innovations B.V.</div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">{t('about.legalEntity')}</div>
+                <div className="text-white mt-1">{config.companyName}</div>
               </div>
               <div>
-                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Headquarters</div>
-                <div className="text-white mt-1">Van Heuven Goedhartlaan<br/>1181 LE Amstelveen, Netherlands</div>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">{t('about.headquarters')}</div>
+                <div className="text-white mt-1 whitespace-pre-line">{config.companyAddress}</div>
               </div>
               <div>
-                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Phone</div>
-                <a href="tel:+31625363610" className="text-white hover:text-orange-500 mt-1 inline-block">+31 6 25363610</a>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">{t('about.phone')}</div>
+                <a href={`tel:${(config.contactPhone || '').replace(/\s/g, '')}`} className="text-white hover:text-orange-500 mt-1 inline-block">{config.contactPhone}</a>
               </div>
               <div>
-                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">Email</div>
-                <a href="mailto:yaniv@masterpiece-innovations.com" className="text-white hover:text-orange-500 mt-1 inline-block break-all">yaniv@masterpiece-innovations.com</a>
+                <div className="text-neutral-500 text-[10px] uppercase tracking-widest">{t('about.email')}</div>
+                <a href={`mailto:${config.contactEmail}`} className="text-white hover:text-orange-500 mt-1 inline-block break-all">{config.contactEmail}</a>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-            {[{ k: '15+', v: 'Years' }, { k: '±0.001', v: 'mm Tolerance' }, { k: '500+', v: 'B2B Clients' }, { k: '24-48h', v: 'RFQ Response' }].map((m) => (
+            {[{ k: '15+', v: t('about.years') }, { k: '±0.001', v: t('about.mmTolerance') }, { k: '500+', v: t('about.b2bClients') }, { k: '24-48h', v: t('about.rfqResponse') }].map((m) => (
               <div key={m.v} className="border border-neutral-800 p-4 text-center">
                 <div className="text-orange-500 text-2xl sm:text-3xl font-black">{m.k}</div>
                 <div className="text-neutral-400 text-xs uppercase tracking-widest mt-1">{m.v}</div>

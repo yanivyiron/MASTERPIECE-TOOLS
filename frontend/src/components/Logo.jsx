@@ -1,6 +1,7 @@
 import React from 'react';
+import { useSiteConfig } from '../context/SiteConfigContext';
 
-// Recreated diamond logo — not the actual brand asset, custom SVG inspired by the brand mark
+// Diamond logo — fallback when no admin-uploaded logo image is set
 export const LogoMark = ({ className = 'w-9 h-9', accent = '#FF6B1A' }) => (
   <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
     <defs>
@@ -17,16 +18,38 @@ export const LogoMark = ({ className = 'w-9 h-9', accent = '#FF6B1A' }) => (
   </svg>
 );
 
-const Logo = ({ compact = false, light = true }) => (
-  <div className="flex items-center gap-3 select-none">
-    <LogoMark />
-    {!compact && (
-      <div className={`leading-tight font-bold tracking-tight ${light ? 'text-white' : 'text-neutral-900'}`}>
-        <div className="text-[17px] sm:text-[19px]">Masterpiece</div>
-        <div className="text-[17px] sm:text-[19px] -mt-1">Tools</div>
+const Logo = ({ compact = false, light = true }) => {
+  const { config } = useSiteConfig();
+  const text = config.logoText || 'Masterpiece Tools';
+  // Split into two lines on space if possible (visual feature)
+  const parts = text.includes(' ') ? text.split(/ +/) : [text];
+  const line1 = parts[0];
+  const line2 = parts.slice(1).join(' ');
+
+  // Admin-uploaded image takes precedence
+  if (config.logoImageDataUrl) {
+    return (
+      <div className="flex items-center gap-3 select-none" data-testid="brand-logo">
+        <img
+          src={config.logoImageDataUrl}
+          alt={text}
+          className="h-9 sm:h-10 w-auto object-contain max-w-[200px]"
+        />
       </div>
-    )}
-  </div>
-);
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 select-none" data-testid="brand-logo">
+      <LogoMark />
+      {!compact && (
+        <div className={`leading-tight font-bold tracking-tight ${light ? 'text-white' : 'text-neutral-900'}`}>
+          <div className="text-[17px] sm:text-[19px]">{line1}</div>
+          {line2 && <div className="text-[17px] sm:text-[19px] -mt-1">{line2}</div>}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default Logo;

@@ -111,9 +111,9 @@ const Hero = () => {
               <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 border-orange-500" />
 
               <div className="absolute bottom-6 left-6 right-6">
-                <div className="text-[11px] tracking-[0.25em] text-orange-400 uppercase font-bold">Featured</div>
-                <div className="mt-1 text-white font-bold text-xl">Aerospace-Grade Precision</div>
-                <div className="text-neutral-300 text-sm mt-1">ISO 1502 · Sub-micron tolerance</div>
+                <div className="text-[11px] tracking-[0.25em] text-orange-400 uppercase font-bold">{t('hero.featured')}</div>
+                <div className="mt-1 text-white font-bold text-xl">{t('hero.featuredTitle')}</div>
+                <div className="text-neutral-300 text-sm mt-1">{t('hero.featuredSub')}</div>
               </div>
             </div>
           </div>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://www.masterpiece-tools.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.masterpiece-tools.com/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://www.masterpiece-tools.com/?lang=nl" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.masterpiece-tools.com/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.masterpiece-tools.com/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.masterpiece-tools.com/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.masterpiece-tools.com/" />
+    <priority>1.00</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url><loc>https://www.masterpiece-tools.com/about</loc><priority>0.80</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/products</loc><priority>0.90</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/category/precision-gauges</loc><priority>0.90</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/category/custom-cutting-tools</loc><priority>0.90</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/request-a-quote</loc><priority>0.85</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/metric-size-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/metric-size-ring</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/thread-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/thread-ring</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/inch-size-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/inch-size-ring</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/thread-plug-basic-npt</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/thread-ring-basic-npt</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/thread-plug-basic</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/taper-thread-ring</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/taper-thread-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/plug-ring-smooth-gauges</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/buttress-gauge</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/helicoil-metric-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/helicoil-inch-plug</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/solid-carbide-endmill</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/solid-carbide-drill</loc><priority>0.70</priority></url>
+  <url><loc>https://www.masterpiece-tools.com/product/precision-reamer</loc><priority>0.70</priority></url>
+</urlset>
