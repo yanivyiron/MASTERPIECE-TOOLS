@@ -68,6 +68,7 @@ export const api = {
   adminUpdateQuote: (qid, patch) => request('PATCH', `/admin/quotes/${qid}`, { body: patch, auth: true }),
   adminDeleteQuote: (qid) => request('DELETE', `/admin/quotes/${qid}`, { auth: true }),
   adminReplyQuote: (qid, payload) => request('POST', `/admin/quotes/${qid}/reply`, { body: payload, auth: true }),
+  adminWipeTestData: () => request('POST', '/admin/db/wipe-test-data', { body: {}, auth: true }),
 
   // Admin customers
   adminListCustomers: () => request('GET', '/admin/customers', { auth: true }),

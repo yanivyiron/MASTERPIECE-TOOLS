@@ -5,7 +5,7 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
-import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw, ImageIcon, MapPin, Search, Check, ExternalLink, KeyRound, SendHorizontal, Loader2, CloudCheck, CloudOff } from 'lucide-react';
+import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw, ImageIcon, MapPin, Search, Check, ExternalLink, KeyRound, SendHorizontal, Loader2, CloudCheck, CloudOff, BarChart3, Database, AlertTriangle } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { useSiteConfig, SITE_CONFIG_DEFAULTS } from '../../context/SiteConfigContext';
 import { ALL_COUNTRIES } from '../../data/countries';
@@ -504,6 +504,64 @@ const AdminSettings = () => {
               <option value="pt">Português</option>
             </select>
           </Field>
+        </Section>
+
+        {/* ANALYTICS / PIXELS */}
+        <Section icon={BarChart3} title="Analytics & Tracking Pixels" hint="IDs are injected into the public site <head> only (never on /admin). Leave blank to disable a tracker." testId="settings-analytics">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Google Analytics 4 — Measurement ID">
+              <Input value={config.analyticsGa4Id || ''} onChange={update('analyticsGa4Id')} placeholder="G-XXXXXXXXXX" className={stdInput} data-testid="settings-ga4-id" />
+              <p className="text-[10px] text-neutral-500 mt-1">Find it at analytics.google.com → Admin → Data Streams.</p>
+            </Field>
+            <Field label="Google Tag Manager — Container ID">
+              <Input value={config.analyticsGtmId || ''} onChange={update('analyticsGtmId')} placeholder="GTM-XXXXXXX" className={stdInput} data-testid="settings-gtm-id" />
+              <p className="text-[10px] text-neutral-500 mt-1">Loads all of your GTM tags in one go.</p>
+            </Field>
+            <Field label="Meta / Facebook Pixel ID">
+              <Input value={config.analyticsMetaPixelId || ''} onChange={update('analyticsMetaPixelId')} placeholder="123456789012345" className={stdInput} data-testid="settings-meta-pixel-id" />
+              <p className="text-[10px] text-neutral-500 mt-1">Find it at business.facebook.com → Events Manager.</p>
+            </Field>
+            <Field label="LinkedIn Insight — Partner ID">
+              <Input value={config.analyticsLinkedInPartnerId || ''} onChange={update('analyticsLinkedInPartnerId')} placeholder="1234567" className={stdInput} data-testid="settings-li-partner-id" />
+              <p className="text-[10px] text-neutral-500 mt-1">Find it at LinkedIn Campaign Manager → Account assets → Insight tag.</p>
+            </Field>
+            <Field label="Custom <head> HTML (Hotjar, Clarity, custom pixels…)" className="md:col-span-2">
+              <Textarea value={config.analyticsCustomHead || ''} onChange={update('analyticsCustomHead')} placeholder="<script>/* your code here */</script>" className="mt-2 bg-neutral-900 border-neutral-800 text-white min-h-[120px] font-mono text-xs" data-testid="settings-analytics-custom-head" />
+              <p className="text-[10px] text-neutral-500 mt-1">Pasted as-is into the public <code className="text-orange-400">&lt;head&gt;</code>. Only the site owner can edit this — handle carefully.</p>
+            </Field>
+          </div>
+        </Section>
+
+        {/* DANGER ZONE — DB WIPE */}
+        <Section icon={Database} title="Data Maintenance" hint="One-shot maintenance actions. Use with care — destructive operations are not reversible." testId="settings-maintenance">
+          <div className="border border-red-500/30 bg-red-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-white font-bold text-sm mb-1">Wipe test data</div>
+                <p className="text-xs text-neutral-400 mb-3">
+                  Permanently deletes <strong>all quotes</strong>, <strong>customer overrides</strong>, <strong>AI conversation threads</strong>, and <strong>email history</strong>.
+                  Keeps your settings, products, categories, templates, team, AI actions and visual-editor overrides.
+                </p>
+                <Button
+                  onClick={async () => {
+                    if (!window.confirm('Permanently delete ALL quotes, customers and AI conversations? This cannot be undone.')) return;
+                    try {
+                      const res = await api.adminWipeTestData();
+                      const d = res?.deleted || {};
+                      toast({ title: 'Test data wiped ✓', description: `Quotes: ${d.quotes || 0}, customers: ${d.customers || 0}, AI: ${d.ai_conversations || 0}, emails: ${d.email_history || 0}` });
+                    } catch (e) {
+                      toast({ title: 'Wipe failed', description: e?.message || 'Owner-only action' });
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-500 rounded-none h-9 text-xs"
+                  data-testid="settings-wipe-btn"
+                >
+                  <Database className="w-3.5 h-3.5 mr-2" /> Wipe test data
+                </Button>
+              </div>
+            </div>
+          </div>
         </Section>
 
         <div className="text-xs text-neutral-500 italic flex items-center gap-2">

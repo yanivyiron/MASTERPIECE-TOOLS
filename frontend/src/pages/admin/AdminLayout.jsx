@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, FileText, Package, Users, Settings, LogOut, ExternalLink, Sparkles, Layers, Shield, Mail, Megaphone, Globe } from 'lucide-react';
+import { LayoutDashboard, FileText, Package, Users, Settings, LogOut, ExternalLink, Sparkles, Layers, Shield, Mail, Megaphone, Globe, Edit3 } from 'lucide-react';
 import Logo from '../../components/Logo';
 import { useLang } from '../../context/LanguageContext';
 
@@ -34,6 +34,7 @@ const AdminLayout = () => {
           <NavLink to="/admin/customers" className={link}><Users className="w-4 h-4" /> {t('admin.customers')}</NavLink>
           <NavLink to="/admin/blast" className={link} data-testid="admin-nav-blast"><Megaphone className="w-4 h-4" /> Email blast</NavLink>
           <NavLink to="/admin/import" className={link} data-testid="admin-nav-import"><Globe className="w-4 h-4" /> Web import</NavLink>
+          <NavLink to="/admin/content" className={link} data-testid="admin-nav-content"><Edit3 className="w-4 h-4" /> Site content</NavLink>
           <NavLink to="/admin/templates" className={link} data-testid="admin-nav-templates"><Mail className="w-4 h-4" /> Templates</NavLink>
           <NavLink to="/admin/team" className={link} data-testid="admin-nav-team"><Shield className="w-4 h-4" /> Team &amp; access</NavLink>
           <NavLink to="/admin/settings" className={link}><Settings className="w-4 h-4" /> {t('admin.settings')}</NavLink>

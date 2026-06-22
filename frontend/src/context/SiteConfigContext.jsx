@@ -64,6 +64,13 @@ export const SITE_CONFIG_DEFAULTS = {
   // Wix-like visual editor — every editable text/image on the public site is stored here
   // under a stable key (e.g. "home.hero.eyebrow", "footer.legal").
   site_overrides: {},
+
+  // Analytics & tracking — injected into the public site <head>
+  analyticsGa4Id: '',          // e.g. G-XXXXXXXXXX
+  analyticsGtmId: '',          // e.g. GTM-XXXXXXX
+  analyticsMetaPixelId: '',    // Facebook/Meta Pixel ID
+  analyticsLinkedInPartnerId: '',
+  analyticsCustomHead: '',     // raw HTML pasted into <head> (Hotjar, Clarity, etc.)
 };
 
 const SiteConfigContext = createContext({

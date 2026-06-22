@@ -12,7 +12,7 @@ import Footer from './components/layout/Footer';
 import BasketDrawer from './components/BasketDrawer';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import FloatingLanguageSwitcher from './components/FloatingLanguageSwitcher';
-import FloatingEditToggle from './components/FloatingEditToggle';
+import AnalyticsScripts from './components/AnalyticsScripts';
 import { ScrollProgress } from './components/animations';
 import { Toaster } from './components/ui/toaster';
 
@@ -37,6 +37,7 @@ import AdminTeam from './pages/admin/Team';
 import AdminEmailTemplates from './pages/admin/EmailTemplates';
 import AdminEmailBlast from './pages/admin/EmailBlast';
 import AdminWebImport from './pages/admin/WebImport';
+import AdminSiteContent from './pages/admin/SiteContent';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -58,6 +59,7 @@ const PageTransition = ({ children }) => (
 
 const PublicShell = ({ children }) => (
   <>
+    <AnalyticsScripts />
     <ScrollProgress />
     <Header />
     <main><PageTransition>{children}</PageTransition></main>
@@ -65,7 +67,6 @@ const PublicShell = ({ children }) => (
     <BasketDrawer />
     <FloatingWhatsApp />
     <FloatingLanguageSwitcher />
-    <FloatingEditToggle />
   </>
 );
 
@@ -101,6 +102,7 @@ const AnimatedRoutes = () => {
           <Route path="templates" element={<AdminEmailTemplates />} />
           <Route path="blast" element={<AdminEmailBlast />} />
           <Route path="import" element={<AdminWebImport />} />
+          <Route path="content" element={<AdminSiteContent />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -25,13 +25,19 @@ const fmtDate = (s) => {
 
 const AdminQuotes = () => {
   const [quotes, setQuotes] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(null);
   const [reply, setReply] = useState('');
+  const [replyTemplate, setReplyTemplate] = useState('');
+  const [replyAtts, setReplyAtts] = useState([]);
   const [adminNotes, setAdminNotes] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+  const fileToDataUrl = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
 
   const refresh = async () => {
     setLoading(true);
@@ -45,6 +51,7 @@ const AdminQuotes = () => {
     }
   };
   useEffect(() => { refresh(); }, []);
+  useEffect(() => { api.adminListTemplates().then((r) => setTemplates(r.templates || [])).catch(() => {}); }, []);
 
   const filtered = useMemo(() => quotes.filter((q) => {
     if (filter !== 'all' && q.status !== filter) return false;
@@ -59,6 +66,8 @@ const AdminQuotes = () => {
   const open = (q) => {
     setActive(q);
     setReply('');
+    setReplyTemplate('');
+    setReplyAtts([]);
     setAdminNotes(q.adminNotes || '');
   };
 
@@ -86,15 +95,38 @@ const AdminQuotes = () => {
     if (!active || !reply.trim()) return;
     setBusy(true);
     try {
-      const res = await api.adminReplyQuote(active.qid, { message: reply });
+      const res = await api.adminReplyQuote(active.qid, {
+        message: reply,
+        templateId: replyTemplate || null,
+        attachments: replyAtts,
+      });
       toast({ title: 'Reply sent', description: `Mode: ${res.mode}` });
       setReply('');
+      setReplyTemplate('');
+      setReplyAtts([]);
       refresh();
       const updated = (await api.adminListQuotes()).quotes.find(q => q.qid === active.qid);
       if (updated) setActive(updated);
     } catch (e) { toast({ title: 'Reply failed', description: e.message }); }
     finally { setBusy(false); }
   };
+
+  const onPickReplyFiles = async (files) => {
+    if (!files?.length) return;
+    let total = replyAtts.reduce((a, b) => a + (b.size || 0), 0);
+    const out = [...replyAtts];
+    for (const f of files) {
+      if (total + f.size > MAX_TOTAL_BYTES) {
+        toast({ title: 'Too many attachments', description: '25 MB total cap reached.' });
+        break;
+      }
+      const data = await fileToDataUrl(f);
+      out.push({ name: f.name, type: f.type || 'application/octet-stream', size: f.size, data });
+      total += f.size;
+    }
+    setReplyAtts(out);
+  };
+  const removeReplyAtt = (i) => setReplyAtts(replyAtts.filter((_, idx) => idx !== i));
 
   const remove = async (q) => {
     if (!window.confirm(`Delete quote ${q.qid}?`)) return;
@@ -235,7 +267,29 @@ const AdminQuotes = () => {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Reply by email</div>
+                  {templates.length > 0 && (
+                    <select value={replyTemplate} onChange={(e) => setReplyTemplate(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 text-white h-8 px-2 text-xs mb-2" data-testid="admin-quote-reply-tpl">
+                      <option value="">— No template —</option>
+                      {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  )}
                   <Textarea data-testid="admin-quote-reply-text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your reply…" className="bg-neutral-900 border-neutral-800 min-h-[100px]" />
+                  <div className="mt-2">
+                    <input id={`q-att-${active.qid}`} type="file" multiple className="hidden" onChange={(e) => onPickReplyFiles(Array.from(e.target.files || []))} data-testid="admin-quote-reply-att-input" />
+                    <Button type="button" size="sm" variant="outline" onClick={() => document.getElementById(`q-att-${active.qid}`).click()} className="rounded-none bg-transparent border-neutral-800 text-neutral-300 hover:border-orange-500 hover:text-orange-500 h-7 text-xs" data-testid="admin-quote-reply-att-btn">
+                      <Paperclip className="w-3.5 h-3.5 mr-1.5" /> Add attachments
+                    </Button>
+                    {replyAtts.length > 0 && (
+                      <div className="mt-1 space-y-1">
+                        {replyAtts.map((a, i) => (
+                          <div key={`${a.name}-${i}`} className="flex items-center justify-between text-[11px] text-neutral-300 border border-neutral-800 px-2 py-1">
+                            <span className="flex items-center gap-1.5 truncate"><FileText className="w-3 h-3 text-orange-500 flex-shrink-0" /> {a.name} <span className="text-neutral-500">· {(a.size / 1024).toFixed(0)} KB</span></span>
+                            <button onClick={() => removeReplyAtt(i)} className="text-neutral-500 hover:text-red-400" data-testid={`admin-quote-reply-att-rm-${i}`}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <Button onClick={sendReply} disabled={busy || !reply.trim()} className="bg-orange-500 hover:bg-orange-400 rounded-none w-full mt-2" data-testid="admin-quote-reply-send">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Send reply</>}
                   </Button>

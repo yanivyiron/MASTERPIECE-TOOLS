@@ -38,7 +38,13 @@ def admin_token(http):
     assert r.status_code == 200, f"login failed: {r.status_code} {r.text}"
     data = r.json()
     code = data.get("demoCode")
-    assert code, "demoCode missing - SMTP must be unconfigured for tests"
+    if not code:
+        # SMTP configured -> demoCode not exposed. Fall back to a direct JWT mint
+        # (uses the same JWT_SECRET env the running server uses).
+        import sys
+        sys.path.insert(0, "/app/backend")
+        from auth import issue_jwt  # type: ignore
+        return issue_jwt(OWNER_EMAIL, "owner")
     rv = http.post(f"{API}/admin/auth/verify", json={"email": OWNER_EMAIL, "code": code})
     assert rv.status_code == 200, f"verify failed: {rv.status_code} {rv.text}"
     tok = rv.json().get("token")
@@ -105,9 +111,14 @@ class TestAdminAuth:
         d = r.json()
         assert d["ok"] is True
         assert d["ttlSeconds"] == 600
-        # SMTP not configured in preview -> demoCode surfaced
-        assert "demoCode" in d
-        assert re.match(r"^\d{6}$", d["demoCode"])
+        # demoCode is only surfaced while SMTP is unconfigured. With SMTP
+        # configured (live settings), the OTP is delivered via email and demoCode is
+        # intentionally omitted from the response.
+        if d.get("email_mode") != "smtp":
+            assert "demoCode" in d
+            assert re.match(r"^\d{6}$", d["demoCode"])
+        else:
+            assert "demoCode" not in d
 
     def test_login_wrong_password_401(self, http):
         r = http.post(f"{API}/admin/auth/login", json={"email": OWNER_EMAIL, "password": "WRONG"})

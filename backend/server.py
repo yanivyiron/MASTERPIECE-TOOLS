@@ -145,6 +145,8 @@ class QuoteUpdate(BaseModel):
 class QuoteReply(BaseModel):
     message: str = Field(min_length=1, max_length=10000)
     subject: Optional[str] = None
+    attachments: List[Dict[str, Any]] = []   # [{name,type,data}]
+    templateId: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -454,16 +456,31 @@ async def admin_reply_quote(qid: str, body: QuoteReply, auth=Depends(require_per
         raise HTTPException(status_code=404, detail="Quote not found")
     message = body.message.strip()
     subject = body.subject or f"Re: your Masterpiece quote {qid}"
+    html_body = f"<div style='font-family:Arial;line-height:1.6'>{message}</div>"
+    # If a template was selected, use its HTML and substitute {{message}} placeholder
+    if body.templateId:
+        from bson import ObjectId
+        try:
+            tpl = await db.email_templates.find_one({"_id": ObjectId(body.templateId)})
+        except Exception:
+            tpl = None
+        if tpl:
+            tpl_html = tpl.get("html") or ""
+            html_body = tpl_html.replace("{{message}}", message) if "{{message}}" in tpl_html else (tpl_html + html_body)
+            if not body.subject:
+                subject = tpl.get("subject") or subject
+    atts = list(body.attachments or [])
     res = await send_email(
         to=doc["email"],
         subject=subject,
-        html=f"<div style='font-family:Arial;line-height:1.6'>{message}</div>",
+        html=html_body,
         reply_to=await get_notify_email(),
+        attachments=atts,
     )
     await db.quotes.update_one(
         {"qid": qid},
         {"$set": {"status": "replied", "updatedAt": now_iso()},
-         "$push": {"replies": {"at": now_iso(), "by": auth["sub"], "subject": subject, "message": message, "mode": res.get("mode")}}},
+         "$push": {"replies": {"at": now_iso(), "by": auth["sub"], "subject": subject, "message": message, "mode": res.get("mode"), "attachmentCount": len(atts)}}},
     )
     return {"ok": True, "mode": res.get("mode")}
 
@@ -522,19 +539,33 @@ async def admin_delete_customer(email: str, auth=Depends(require_perm("customers
 
 @api.post("/admin/customers/{email}/email")
 async def admin_email_customer(email: str, body: SingleEmailRequest, auth=Depends(require_perm("customers.email"))):
-    """Send a single targeted email to one customer (with optional attachments)."""
+    """Send a single targeted email to one customer (with optional attachments + template)."""
     e = email.lower().strip()
+    subject = body.subject
+    html_body = body.html or ""
+    text_body = body.text or ""
+    # Apply template if requested
+    if body.templateId:
+        from bson import ObjectId
+        try:
+            tpl = await db.email_templates.find_one({"_id": ObjectId(body.templateId)})
+        except Exception:
+            tpl = None
+        if tpl:
+            html_body = (tpl.get("html") or html_body)
+            if not subject or subject == tpl.get("subject"):
+                subject = tpl.get("subject") or subject
     atts = [a.model_dump() for a in (body.attachments or [])]
     res = await send_email(
         to=e,
-        subject=body.subject,
-        html=body.html or body.text or "",
-        text=body.text or None,
+        subject=subject,
+        html=html_body or text_body or "",
+        text=text_body or None,
         reply_to=await get_notify_email(),
         attachments=atts,
     )
     await db.customer_emails.insert_one({
-        "to": e, "subject": body.subject, "by": auth["sub"], "at": now_iso(),
+        "to": e, "subject": subject, "by": auth["sub"], "at": now_iso(),
         "mode": res.get("mode"), "ok": res.get("ok"),
         "attachmentCount": len(atts),
     })
@@ -595,6 +626,26 @@ async def admin_settings_repair(auth=Depends(require_owner)):
         return {"ok": True, "hops": 0, "note": "Already flat."}
     await db.settings.update_one({"_id": "site"}, {"$set": {"data": data, "updatedAt": now_iso()}}, upsert=True)
     return {"ok": True, "hops": hops}
+
+
+@api.post("/admin/db/wipe-test-data")
+async def admin_wipe_test_data(auth=Depends(require_owner)):
+    """Owner-only: clears transactional/test data (quotes, customer overrides, AI conversations,
+    customer email history). Keeps settings, users, team, products, categories, templates,
+    documents, ai_actions, site_overrides."""
+    r1 = await db.quotes.delete_many({})
+    r2 = await db.customer_overrides.delete_many({})
+    r3 = await db.ai_conversations.delete_many({})
+    r4 = await db.customer_emails.delete_many({})
+    return {
+        "ok": True,
+        "deleted": {
+            "quotes": r1.deleted_count,
+            "customers": r2.deleted_count,
+            "ai_conversations": r3.deleted_count,
+            "email_history": r4.deleted_count,
+        },
+    }
 
 
 # ============================================================
