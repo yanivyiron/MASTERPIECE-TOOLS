@@ -246,7 +246,7 @@ async def admin_list_quotes(auth=Depends(require_owner), limit: int = 100, statu
     rows = await db.quotes.find(q).sort("createdAt", -1).limit(min(max(limit, 1), 500)).to_list(None)
     out = []
     for r in rows:
-        r["id"] = str(r.pop("_id"))
+        r.pop("_id", None)
         out.append(r)
     return {"quotes": out, "count": len(out)}
 
@@ -263,16 +263,19 @@ async def admin_update_quote(qid: str, body: QuoteUpdate, auth=Depends(require_o
     return {"ok": True}
 
 
+class QuoteReply(BaseModel):
+    message: str = Field(min_length=1, max_length=10000)
+    subject: Optional[str] = None
+
+
 @api.post("/admin/quotes/{qid}/reply")
-async def admin_reply_quote(qid: str, body: Dict[str, Any], auth=Depends(require_owner)):
+async def admin_reply_quote(qid: str, body: QuoteReply, auth=Depends(require_owner)):
     """Send an email reply to the customer for this quote."""
     doc = await db.quotes.find_one({"qid": qid})
     if not doc:
         raise HTTPException(status_code=404, detail="Quote not found")
-    message = (body.get("message") or "").strip()
-    if not message:
-        raise HTTPException(status_code=400, detail="Message required")
-    subject = body.get("subject") or f"Re: your Masterpiece quote {qid}"
+    message = body.message.strip()
+    subject = body.subject or f"Re: your Masterpiece quote {qid}"
     res = send_email(
         to=doc["email"],
         subject=subject,
