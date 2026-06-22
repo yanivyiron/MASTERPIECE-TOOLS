@@ -47,10 +47,10 @@ const Hero = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
           </div>
 
-          <h1 className="text-white font-black tracking-tight leading-[0.92] text-[44px] sm:text-[64px] lg:text-[92px]">
+          <h1 className="text-white font-black tracking-tight leading-[0.92] text-[42px] sm:text-[58px] lg:text-[80px] xl:text-[88px] hyphens-auto break-words">
             <span className="block opacity-95 animate-[slideInLeft_0.8s_ease-out_0.1s_both]">{t('hero.title1')}</span>
             <span className="block animate-[slideInLeft_0.8s_ease-out_0.3s_both]">
-              <span className="relative inline-block">
+              <span className="relative inline-block max-w-full">
                 <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-orange-300 via-orange-500 to-orange-600">{t('hero.title2')}</span>
                 <Sparkles className="absolute -top-3 -right-8 w-6 h-6 text-orange-400 animate-[twinkle_2.5s_ease-in-out_infinite]" />
                 <span className="absolute -bottom-2 left-0 h-[8px] w-full bg-orange-500/30 blur-md" />

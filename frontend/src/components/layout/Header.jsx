@@ -50,7 +50,7 @@ const Header = () => {
           </div>
           <div className="flex items-center gap-4 shrink-0">
             {config.linkedinUrl && (
-              <a href={config.linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-orange-400 transition-colors">
+              <a href={config.linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" data-testid="header-linkedin-top" className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-orange-400 transition-colors">
                 <Linkedin className="w-3.5 h-3.5" /> <span className="hidden lg:inline">LinkedIn</span>
               </a>
             )}
@@ -75,6 +75,18 @@ const Header = () => {
             </nav>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {config.linkedinUrl && (
+                <a
+                  href={config.linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn"
+                  data-testid="header-linkedin"
+                  className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded border border-neutral-800 hover:border-orange-500 hover:text-orange-500 text-neutral-300 transition-colors"
+                >
+                  <Linkedin className="w-4 h-4" />
+                </a>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="hidden sm:inline-flex items-center gap-1.5 text-[12px] tracking-wider text-neutral-300 hover:text-white px-2.5 py-1.5 rounded border border-neutral-800 hover:border-neutral-600 transition-colors">

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import './App.css';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LanguageProvider } from './context/LanguageContext';
@@ -69,6 +69,9 @@ const AnimatedRoutes = () => {
         <Route path="/category/:slug" element={<PublicShell><CategoryPage /></PublicShell>} />
         <Route path="/about" element={<PublicShell><About /></PublicShell>} />
         <Route path="/request-a-quote" element={<PublicShell><RequestQuote /></PublicShell>} />
+        <Route path="/request-quote" element={<Navigate to="/request-a-quote" replace />} />
+        <Route path="/quote" element={<Navigate to="/request-a-quote" replace />} />
+        <Route path="/rfq" element={<Navigate to="/request-a-quote" replace />} />
         <Route path="/basket" element={<PublicShell><Basket /></PublicShell>} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -79,6 +82,7 @@ const AnimatedRoutes = () => {
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   );
