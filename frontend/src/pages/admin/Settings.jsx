@@ -9,6 +9,7 @@ import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedi
 import { toast } from '../../hooks/use-toast';
 import { useSiteConfig, SITE_CONFIG_DEFAULTS } from '../../context/SiteConfigContext';
 import { ALL_COUNTRIES } from '../../data/countries';
+import { SMTP_PRESETS } from '../../data/smtpPresets';
 import { api } from '../../lib/api';
 
 const fileToDataUrl = (file) => new Promise((resolve, reject) => {
@@ -130,6 +131,18 @@ const AdminSettings = () => {
     } finally {
       setSavingPw(false);
     }
+  };
+
+  // SMTP preset picker — auto-fills host/port/tls
+  const [openPreset, setOpenPreset] = useState(null); // id of expanded preset card
+  const applyPreset = (preset) => {
+    updateConfig({
+      smtpHost: preset.host || config.smtpHost,
+      smtpPort: preset.port || config.smtpPort,
+      smtpUseTls: preset.useTls || 'true',
+    });
+    setOpenPreset(preset.id);
+    toast({ title: `${preset.name} preset applied`, description: 'Now enter your username + password below and press Save.' });
   };
 
   const stdInput = 'bg-neutral-900 border-neutral-800 text-white focus-visible:ring-orange-500';
@@ -333,13 +346,73 @@ const AdminSettings = () => {
         </Section>
 
         {/* EMAIL PROVIDER */}
-        <Section icon={Mail} title="Email Provider" hint="Used in Phase 2 backend to send RFQ notifications. Credentials are encrypted server-side." testId="settings-email">
+        <Section icon={Mail} title="Email Provider" hint="Pick a free SMTP provider below — each has a built-in tutorial. Credentials are encrypted server-side." testId="settings-email">
+          {/* Free SMTP provider picker */}
+          <div className="mb-6">
+            <Label className="text-neutral-400 text-[11px] uppercase tracking-widest">Quick setup — pick a free provider</Label>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {SMTP_PRESETS.map((p) => {
+                const active = config.smtpHost === p.host && p.host;
+                const open = openPreset === p.id;
+                return (
+                  <div key={p.id} className={`border ${active ? 'border-orange-500 bg-orange-500/5' : 'border-neutral-800 bg-neutral-900'} transition-colors`}>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className="w-full text-left p-3 hover:bg-neutral-800/60 transition-colors"
+                      data-testid={`smtp-preset-${p.id}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-white font-bold text-sm">{p.name}</div>
+                        {p.tag && <span className={`text-[9px] tracking-widest px-1.5 py-0.5 border ${active ? 'border-orange-500 text-orange-400' : 'border-neutral-700 text-neutral-400'}`}>{p.tag}</span>}
+                      </div>
+                      <div className="text-[11px] text-neutral-400 mt-1.5">{p.free}</div>
+                      <div className="text-[10px] text-neutral-500 mt-1 line-clamp-2">{p.bestFor}</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenPreset(open ? null : p.id)}
+                      className="w-full text-[10px] tracking-widest uppercase text-orange-500 hover:text-orange-400 border-t border-neutral-800 py-1.5"
+                      data-testid={`smtp-preset-tutorial-${p.id}`}
+                    >
+                      {open ? '↑ Hide tutorial' : '↓ Show tutorial'}
+                    </button>
+                    {open && (
+                      <div className="border-t border-neutral-800 p-3 bg-black/50">
+                        <div className="text-[10px] tracking-widest text-orange-500 uppercase mb-2 inline-flex items-center gap-1.5">
+                          <Mail className="w-3 h-3" /> ~{p.setupMinutes} min setup
+                        </div>
+                        <ol className="text-[11px] text-neutral-300 space-y-1.5 list-decimal list-inside leading-snug">
+                          {p.steps.map((s, i) => <li key={i}>{s}</li>)}
+                        </ol>
+                        {(p.signupUrl || p.docUrl) && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {p.signupUrl && (
+                              <a href={p.signupUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] tracking-widest uppercase border border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white px-2 py-1 transition-colors">
+                                <ExternalLink className="w-3 h-3" /> Sign up
+                              </a>
+                            )}
+                            {p.docUrl && (
+                              <a href={p.docUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] tracking-widest uppercase border border-neutral-700 text-neutral-300 hover:border-orange-500 hover:text-orange-400 px-2 py-1 transition-colors">
+                                <ExternalLink className="w-3 h-3" /> Docs
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Provider">
+            <Field label="Provider type">
               <select value={config.emailProvider} onChange={update('emailProvider')} className="w-full bg-neutral-900 border border-neutral-800 text-white h-10 px-3">
                 <option value="smtp">SMTP</option>
-                <option value="sendgrid">SendGrid</option>
-                <option value="resend">Resend</option>
+                <option value="sendgrid">SendGrid (uses SMTP)</option>
+                <option value="resend">Resend (uses SMTP)</option>
                 <option value="mailgun">Mailgun</option>
               </select>
             </Field>

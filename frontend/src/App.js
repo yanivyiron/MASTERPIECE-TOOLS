@@ -11,6 +11,7 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BasketDrawer from './components/BasketDrawer';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
+import FloatingLanguageSwitcher from './components/FloatingLanguageSwitcher';
 import { ScrollProgress } from './components/animations';
 import { Toaster } from './components/ui/toaster';
 
@@ -55,6 +56,7 @@ const PublicShell = ({ children }) => (
     <Footer />
     <BasketDrawer />
     <FloatingWhatsApp />
+    <FloatingLanguageSwitcher />
   </>
 );
 

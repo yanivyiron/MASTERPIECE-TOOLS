@@ -19,7 +19,8 @@ const ProductCard = ({ product, variant = 'default' }) => {
   const { t } = useLang();
   const { addItem } = useBasket();
   const [adding, setAdding] = React.useState(false);
-  const badge = product.badge ? BADGE_MAP[product.badge] : null;
+  // All products carry the Aerospace label by default — ISO/EN is the manufacturing standard.
+  const badge = BADGE_MAP.aerospace;
 
   const handleAdd = (e) => {
     e.preventDefault();

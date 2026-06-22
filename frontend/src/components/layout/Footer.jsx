@@ -54,8 +54,8 @@ const Footer = () => {
           <div className="md:col-span-3">
             <div className="text-white text-sm font-semibold tracking-widest uppercase mb-4">{t('footer.products')}</div>
             <ul className="space-y-2.5 text-sm">
-              <li><Link to="/category/precision-gauges" className="hover:text-orange-500">{t('nav.precisionGauges')}</Link></li>
               <li><Link to="/category/custom-cutting-tools" className="hover:text-orange-500">{t('nav.cuttingTools')}</Link></li>
+              <li><Link to="/category/precision-gauges" className="hover:text-orange-500">{t('nav.precisionGauges')}</Link></li>
               <li><Link to="/products" className="hover:text-orange-500">{t('nav.products')}</Link></li>
               <li><Link to="/request-a-quote" className="hover:text-orange-500">{t('nav.requestQuote')}</Link></li>
             </ul>
