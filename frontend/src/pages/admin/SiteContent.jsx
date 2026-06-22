@@ -81,6 +81,9 @@ const SiteContentEditor = () => {
   // Seed drafts from existing overrides whenever config hydrates
   useEffect(() => {
     setDrafts((d) => ({ ...overrides, ...d }));
+    // overrides is intentionally omitted — we only re-seed once the initial
+    // hydration completes; user-typed drafts must not be clobbered by every
+    // override mutation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrating]);
 

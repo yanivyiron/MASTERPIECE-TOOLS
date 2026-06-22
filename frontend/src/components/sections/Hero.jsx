@@ -75,8 +75,8 @@ const Hero = () => {
 
           {/* Animated stats row */}
           <div className="mt-14 flex flex-wrap items-center gap-x-10 gap-y-4 animate-[fadeIn_1s_ease-out_1.1s_both]">
-            {STATS.map((s, i) => (
-              <div key={i} className="flex flex-col">
+            {STATS.map((s) => (
+              <div key={s.labelKey} className="flex flex-col">
                 <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight tabular-nums">
                   <AnimatedCounter value={s.value} prefix={s.prefix || ''} suffix={s.suffix || ''} decimals={s.decimals || 0} />
                 </div>

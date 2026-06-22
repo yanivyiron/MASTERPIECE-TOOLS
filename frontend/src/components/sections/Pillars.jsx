@@ -95,8 +95,8 @@ export const StrategicSection = () => {
         </div>
         <div className="hidden lg:block">
           <div className="grid grid-cols-2 gap-4">
-            {blocks.map((b, i) => (
-              <div key={i} className="p-5 bg-black/70 border border-neutral-800 hover:border-orange-500/50 transition-colors">
+            {blocks.map((b) => (
+              <div key={b.k} className="p-5 bg-black/70 border border-neutral-800 hover:border-orange-500/50 transition-colors">
                 <div className="text-orange-500 text-xs tracking-widest font-bold">{b.k}</div>
                 <div className="mt-2 text-neutral-500 text-[10px] tracking-widest uppercase">{t(b.tk)}</div>
                 <div className="mt-1 text-white font-bold text-sm uppercase">{t(b.t1)}</div>

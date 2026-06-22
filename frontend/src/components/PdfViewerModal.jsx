@@ -3,9 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Download, ExternalLink, X } from 'lucide-react';
 import { useLang } from '../context/LanguageContext';
 
+// Detect environments where iframe-embedded PDFs auto-download:
+//  • iOS Safari/Chrome (no inline PDF viewer at all on iPhone)
+//  • Android Chrome (≤ recent versions also force download)
+const isMobileLikeBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // iPhone/iPod always; iPad Safari is OK on desktop UA but flag iPadOS too
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  if (/Macintosh/.test(ua) && 'ontouchend' in document) return true; // iPadOS 13+
+  if (/Android/i.test(ua)) return true;
+  return false;
+};
+
 // Inline industrial PDF viewer drawer — used on ProductDetail
 const PdfViewerModal = ({ open, onClose, src, title }) => {
   const { t } = useLang();
+  const mobile = isMobileLikeBrowser();
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -89,26 +103,38 @@ const PdfViewerModal = ({ open, onClose, src, title }) => {
             </div>
 
             <div className="flex-1 bg-neutral-900 relative">
-              <iframe
-                src={`${src}#toolbar=1&navpanes=0&statusbar=0&view=FitH`}
-                title={title}
-                className="w-full h-full border-0"
-                data-testid="pdf-iframe"
-              />
-              <noscript>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                  <FileText className="w-12 h-12 text-orange-500 mb-3" />
-                  <div className="text-white font-semibold">PDF preview unavailable on this device.</div>
+              {mobile ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6" data-testid="pdf-mobile-fallback">
+                  <FileText className="w-14 h-14 text-orange-500 mb-4" />
+                  <div className="text-white font-bold text-lg leading-tight">{title}</div>
+                  <p className="text-neutral-400 text-sm mt-2 max-w-sm">
+                    Mobile browsers can&apos;t embed PDF previews inline. Tap below to open it in a new tab — Safari/Chrome will display the document without downloading it.
+                  </p>
                   <a
                     href={src}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-5 py-3 text-sm tracking-widest uppercase font-semibold"
+                    className="mt-5 inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-6 py-3 text-sm tracking-widest uppercase font-bold"
+                    data-testid="pdf-mobile-open-btn"
                   >
                     <ExternalLink className="w-4 h-4" /> {t('btn.openFullscreen')}
                   </a>
+                  <a
+                    href={src}
+                    download
+                    className="mt-2 inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 text-[11px] tracking-widest uppercase"
+                  >
+                    <Download className="w-3.5 h-3.5" /> {t('btn.downloadPdf')}
+                  </a>
                 </div>
-              </noscript>
+              ) : (
+                <iframe
+                  src={`${src}#toolbar=1&navpanes=0&statusbar=0&view=FitH`}
+                  title={title}
+                  className="w-full h-full border-0"
+                  data-testid="pdf-iframe"
+                />
+              )}
             </div>
 
             {/* Mobile-only action bar */}

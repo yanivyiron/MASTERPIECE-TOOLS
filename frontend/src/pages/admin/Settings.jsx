@@ -383,7 +383,7 @@ const AdminSettings = () => {
                           <Mail className="w-3 h-3" /> ~{p.setupMinutes} min setup
                         </div>
                         <ol className="text-[11px] text-neutral-300 space-y-1.5 list-decimal list-inside leading-snug">
-                          {p.steps.map((s, i) => <li key={i}>{s}</li>)}
+                          {p.steps.map((s) => <li key={s}>{s}</li>)}
                         </ol>
                         {(p.signupUrl || p.docUrl) && (
                           <div className="mt-3 flex flex-wrap gap-2">

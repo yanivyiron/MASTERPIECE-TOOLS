@@ -167,7 +167,7 @@ const EmailBlast = () => {
             {attachments.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {attachments.map((a, i) => (
-                  <span key={i} className="inline-flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300">
+                  <span key={`${a.name}-${i}`} className="inline-flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300">
                     <FileText className="w-3.5 h-3.5 text-orange-500" /> {a.name}
                     <button onClick={() => setAttachments((p) => p.filter((_, k) => k !== i))} className="text-neutral-500 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
                   </span>

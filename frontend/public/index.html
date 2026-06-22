@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
+    <!-- Force canonical www on production to avoid Safari's "Load failed" on 308-redirected POST/preflight requests. Runs before any other JS. -->
+    <script>
+      (function () {
+        var h = window.location.hostname;
+        if (h === 'masterpiece-tools.com') {
+          window.location.replace('https://www.masterpiece-tools.com' + window.location.pathname + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
     <meta name="description" content="Aerospace-grade precision gauges and custom carbide cutting tools. ISO-certified, traceable calibration, 24-48h RFQ response. European supply for defense, aerospace, medical and advanced manufacturing." />
     <meta name="keywords" content="precision gauges, custom cutting tools, thread plug, ring gauge, carbide endmill, aerospace metrology, ISO calibration, CNC manufacturing" />
     <meta name="author" content="Masterpiece Tools" />

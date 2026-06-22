@@ -25,12 +25,17 @@ const AnalyticsScripts = () => {
 
   // Custom HTML — supports arbitrary tags (e.g. Hotjar's noscript + script combo).
   // We parse and re-create elements so inline <script> blocks actually execute.
+  // SECURITY: this field is owner-only (require_perm("settings.edit")) and is
+  // explicitly intended to be a paste-in for trusted third-party tracker snippets.
+  // We never render arbitrary user input through this path.
   useEffect(() => {
     if (isAdmin || !custom) return;
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = custom;
+    const wrapper = document.createElement('template');
+    // <template> never executes child <script> tags during HTML parsing, so we
+    // can safely tree-walk and re-create nodes individually.
+    wrapper.innerHTML = custom;  // owner-only trusted input (settings.edit RBAC)
     const inserted = [];
-    Array.from(wrapper.childNodes).forEach((node) => {
+    Array.from(wrapper.content.childNodes).forEach((node) => {
       if (node.nodeType === 1) {
         if (node.tagName === 'SCRIPT') {
           const s = document.createElement('script');
