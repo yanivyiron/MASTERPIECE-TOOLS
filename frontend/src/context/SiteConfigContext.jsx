@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import { api } from '../lib/api';
 
-// Global, fully editable site configuration. Persisted to localStorage today;
-// will be replaced by backend GET/PUT /api/admin/settings + /api/admin/products in Phase 2.
+// Global, fully editable site configuration.
+// - Hydrated on app boot from GET /api/settings (public, sensitive fields stripped)
+// - localStorage acts as a fast cache + offline fallback
+// - Admin presses Save → PUT /api/admin/settings (full config, sensitive fields included)
 
 const STORAGE_KEY = 'mpt_site_config';
 
@@ -13,7 +16,7 @@ export const SITE_CONFIG_DEFAULTS = {
 
   // Logo / brand
   logoText: 'Masterpiece Tools',
-  logoImageDataUrl: '', // optional uploaded image (base64 data URL); empty → use default SVG mark + text
+  logoImageDataUrl: '',
 
   // Contact
   contactEmail: 'yaniv@masterpiece-innovations.com',
@@ -33,7 +36,7 @@ export const SITE_CONFIG_DEFAULTS = {
   rfqResponseTime: '24-48h',
   certifications: 'ISO/EN compliant • Aerospace Approved',
 
-  // Allowed countries for RFQ (ISO codes). Empty list = allow ALL.
+  // Allowed countries (ISO codes). Empty = ALL.
   allowedCountries: [],
 
   // Domain / SEO
@@ -42,22 +45,21 @@ export const SITE_CONFIG_DEFAULTS = {
   seoTitle: 'Masterpiece Tools — Aerospace-Grade Precision Gauges',
   seoDescription: 'ISO-certified precision gauges and custom carbide cutting tools for aerospace, defense and advanced manufacturing. European supply with full traceability and 24-48h RFQ response.',
 
-  // Email provider (used in Phase 2 backend)
+  // Email provider — admin-editable. Password kept server-side after first save.
   emailProvider: 'smtp',
-  smtpHost: 'smtp.gmail.com',
+  smtpHost: '',
   smtpPort: '587',
   smtpUser: '',
-  smtpPassword: '',
+  smtpPassword: '',         // write-only; the public GET strips it
+  smtpUseTls: 'true',
   fromEmail: 'noreply@masterpiece-tools.com',
   fromName: 'Masterpiece Innovations B.V.',
   notifyOnNewQuote: true,
   notifyOnReply: true,
 
-  // Product overrides — { [productId]: { specSheetDataUrl, hidden, customImageDataUrl } }
+  // Per-product overrides + admin-added custom products
   productOverrides: {},
-
-  // Custom products added by admin (in addition to hardcoded ones)
-  customProducts: [], // each: { id, slug, nameKey?, name, descKey?, desc, category, image, specs, features, leadTime, badge, specSheet (dataUrl), createdAt }
+  customProducts: [],
 };
 
 const SiteConfigContext = createContext({
@@ -67,20 +69,55 @@ const SiteConfigContext = createContext({
   setProductOverride: () => {},
   addCustomProduct: () => {},
   removeCustomProduct: () => {},
+  saveToServer: async () => {},
+  hydrating: false,
+  serverSynced: false,
 });
 
-export const SiteConfigProvider = ({ children }) => {
-  const [config, setConfig] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...SITE_CONFIG_DEFAULTS, ...JSON.parse(raw) } : SITE_CONFIG_DEFAULTS;
-    } catch (e) {
-      return SITE_CONFIG_DEFAULTS;
-    }
-  });
+const readLocal = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+};
 
+export const SiteConfigProvider = ({ children }) => {
+  const [config, setConfig] = useState(() => ({ ...SITE_CONFIG_DEFAULTS, ...(readLocal() || {}) }));
+  const [hydrating, setHydrating] = useState(true);
+  const [serverSynced, setServerSynced] = useState(false);
+
+  // Hydrate from backend on boot (overrides cached values)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getSettings();
+        if (!cancelled && res?.data && Object.keys(res.data).length > 0) {
+          setConfig((c) => ({ ...c, ...res.data, smtpPassword: '' /* never expose */ }));
+          setServerSynced(true);
+        }
+      } catch (e) {
+        // Backend unreachable — silently keep local cache so the site still works
+        console.warn('Settings hydration failed, using local cache:', e?.message);
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Persist to localStorage on every change (fast cache; client-only fields like logoImageDataUrl)
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch (e) { /* ignore */ }
+  }, [config]);
+
+  const saveToServer = useCallback(async () => {
+    // Push the whole config. Backend strips smtpPassword from public GET.
+    const payload = { ...config };
+    await api.adminPutSettings(payload);
+    setServerSynced(true);
+    // Wipe local smtpPassword once it's been persisted server-side
+    setConfig((c) => ({ ...c, smtpPassword: '' }));
   }, [config]);
 
   const value = useMemo(() => ({
@@ -99,7 +136,10 @@ export const SiteConfigProvider = ({ children }) => {
       ...c,
       customProducts: c.customProducts.filter((p) => p.id !== id),
     })),
-  }), [config]);
+    saveToServer,
+    hydrating,
+    serverSynced,
+  }), [config, hydrating, serverSynced, saveToServer]);
 
   return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
 };

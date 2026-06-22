@@ -1,4 +1,6 @@
-"""Auth — JWT + bcrypt + email OTP for the admin owner panel."""
+"""Auth — JWT + bcrypt + email OTP. Owner credentials read from MongoDB (settable via admin panel),
+with env-var fallback for the very first login.
+"""
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 import os
@@ -6,21 +8,25 @@ import secrets
 import bcrypt
 import jwt
 from fastapi import HTTPException, Depends, Header, status
+from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+from pathlib import Path
 
-# ---------- Config (from env) ----------
+load_dotenv(Path(__file__).parent / ".env")
+
 JWT_SECRET = os.environ.get("JWT_SECRET", "mpt-dev-secret-change-me")
 JWT_ALG = "HS256"
-JWT_TTL_SECONDS = int(os.environ.get("JWT_TTL_SECONDS", "604800"))  # 7 days
-OTP_TTL_SECONDS = int(os.environ.get("OTP_TTL_SECONDS", "600"))    # 10 min
-OWNER_EMAIL = os.environ.get("ADMIN_EMAIL", "yaniv@masterpiece-innovations.com")
-OWNER_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
-OWNER_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Master2025!")
+JWT_TTL_SECONDS = int(os.environ.get("JWT_TTL_SECONDS", "604800"))
+OTP_TTL_SECONDS = int(os.environ.get("OTP_TTL_SECONDS", "600"))
+DEFAULT_OWNER_EMAIL = os.environ.get("ADMIN_EMAIL", "yaniv@masterpiece-innovations.com")
+DEFAULT_OWNER_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Master2025!")
 
-# In-memory OTP store (single-instance). Persisted to mongo could be added if needed.
+_MONGO = AsyncIOMotorClient(os.environ["MONGO_URL"])
+_DB = _MONGO[os.environ["DB_NAME"]]
+
 _OTP_STORE: Dict[str, dict] = {}
 
 
-# ---------- Helpers ----------
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
@@ -32,17 +38,49 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def verify_owner(email: str, password: str) -> bool:
-    """Verify email + password against env-configured owner credentials.
+async def _get_owner_record() -> dict:
+    """Returns the owner credentials record from db.owner_account, seeding it from env if missing."""
+    doc = await _DB.owner_account.find_one({"_id": "owner"})
+    if not doc:
+        # First-run bootstrap from env
+        doc = {
+            "_id": "owner",
+            "email": DEFAULT_OWNER_EMAIL,
+            "password_hash": hash_password(DEFAULT_OWNER_PASSWORD),
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        }
+        await _DB.owner_account.insert_one(doc)
+    return doc
 
-    If ADMIN_PASSWORD_HASH is set it takes precedence (production).
-    Otherwise we compare against the literal ADMIN_PASSWORD (dev convenience).
-    """
-    if email.lower().strip() != OWNER_EMAIL.lower().strip():
+
+async def get_owner_email() -> str:
+    rec = await _get_owner_record()
+    return rec["email"]
+
+
+async def verify_owner(email: str, password: str) -> bool:
+    rec = await _get_owner_record()
+    if email.lower().strip() != rec["email"].lower().strip():
         return False
-    if OWNER_PASSWORD_HASH:
-        return verify_password(password, OWNER_PASSWORD_HASH)
-    return password == OWNER_PASSWORD
+    return verify_password(password, rec["password_hash"])
+
+
+async def change_owner_password(current_password: str, new_password: str) -> bool:
+    rec = await _get_owner_record()
+    if not verify_password(current_password, rec["password_hash"]):
+        return False
+    await _DB.owner_account.update_one(
+        {"_id": "owner"},
+        {"$set": {"password_hash": hash_password(new_password), "passwordUpdatedAt": datetime.now(timezone.utc).isoformat()}},
+    )
+    return True
+
+
+async def change_owner_email(new_email: str) -> None:
+    await _DB.owner_account.update_one(
+        {"_id": "owner"},
+        {"$set": {"email": new_email.lower().strip(), "emailUpdatedAt": datetime.now(timezone.utc).isoformat()}},
+    )
 
 
 def make_otp() -> str:
@@ -50,7 +88,6 @@ def make_otp() -> str:
 
 
 def issue_otp(email: str) -> str:
-    """Generate + store a 6-digit OTP keyed by email. Returns the code."""
     code = make_otp()
     _OTP_STORE[email.lower().strip()] = {
         "code": code,
@@ -74,7 +111,6 @@ def verify_otp(email: str, code: str) -> bool:
     if entry["code"] != code.strip():
         entry["attempts"] += 1
         return False
-    # one-time use
     _OTP_STORE.pop(key, None)
     return True
 
@@ -97,7 +133,6 @@ def decode_jwt(token: str) -> Optional[dict]:
 
 
 async def require_owner(authorization: Optional[str] = Header(None)) -> dict:
-    """FastAPI dependency: validate Bearer JWT and return payload."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
     token = authorization.split(None, 1)[1]

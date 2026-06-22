@@ -46,15 +46,30 @@ export const api = {
   getSettings: () => request('GET', '/settings'),
   submitQuote: (payload) => request('POST', '/quotes', { body: payload }),
 
-  // Admin
+  // Admin auth
   adminLogin: (email, password) => request('POST', '/admin/auth/login', { body: { email, password } }),
   adminVerify: (email, code) => request('POST', '/admin/auth/verify', { body: { email, code } }),
   adminMe: () => request('GET', '/admin/me', { auth: true }),
+  adminChangePassword: (currentPassword, newPassword) => request('POST', '/admin/account/change-password', { body: { currentPassword, newPassword }, auth: true }),
+  adminChangeEmail: (newEmail, currentPassword) => request('POST', '/admin/account/change-email', { body: { newEmail, currentPassword }, auth: true }),
+
+  // Admin quotes
   adminListQuotes: () => request('GET', '/admin/quotes', { auth: true }),
   adminUpdateQuote: (qid, patch) => request('PATCH', `/admin/quotes/${qid}`, { body: patch, auth: true }),
   adminReplyQuote: (qid, payload) => request('POST', `/admin/quotes/${qid}/reply`, { body: payload, auth: true }),
+
+  // Admin customers
   adminListCustomers: () => request('GET', '/admin/customers', { auth: true }),
+
+  // Admin settings
   adminPutSettings: (data) => request('PUT', '/admin/settings', { body: { data }, auth: true }),
+  adminEmailTest: (to) => request('POST', '/admin/email/test', { body: { to }, auth: true }),
+
+  // Admin products
+  adminListProducts: () => request('GET', '/admin/products', { auth: true }),
+  adminCreateProduct: (product) => request('POST', '/admin/products', { body: product, auth: true }),
+  adminUpdateProduct: (pid, product) => request('PUT', `/admin/products/${pid}`, { body: product, auth: true }),
+  adminDeleteProduct: (pid) => request('DELETE', `/admin/products/${pid}`, { auth: true }),
 };
 
 export default api;

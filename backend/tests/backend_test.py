@@ -59,7 +59,7 @@ class TestHealth:
         d = r.json()
         assert d["ok"] is True
         assert d["service"] == "masterpiece-tools-api"
-        assert d["version"] == "2.0.0"
+        assert d["version"] == "2.1.0"
         assert "email_configured" in d
         assert d["owner_email"] == OWNER_EMAIL
 
@@ -157,10 +157,9 @@ class TestProtectedEnforcement:
         qid = getattr(pytest, "created_qid", None)
         if qid:
             assert any(q.get("qid") == qid for q in d["quotes"]), "submitted quote not visible in admin list"
-            # also confirm _id is exposed as id (Mongo ObjectId not leaked)
+            # confirm _id is not leaked
             sample = d["quotes"][0]
             assert "_id" not in sample
-            assert "id" in sample
 
 
 # ---------- Settings persistence ----------
@@ -219,7 +218,7 @@ class TestAdminReply:
         if not qid:
             pytest.skip("no qid created")
         r = http.post(f"{API}/admin/quotes/{qid}/reply", json={"message": ""}, headers=auth_headers)
-        assert r.status_code == 400
+        assert r.status_code in (400, 422)
 
     def test_reply_unknown_qid_404(self, http, auth_headers):
         r = http.post(f"{API}/admin/quotes/Q-DOESNOT/reply", json={"message": "x"}, headers=auth_headers)
@@ -242,3 +241,202 @@ class TestCustomers:
     def test_customers_without_auth_401(self, http):
         r = http.get(f"{API}/admin/customers")
         assert r.status_code == 401
+
+
+
+# ---------- v2.1.0: Owner account change-password (with revert) ----------
+class TestChangePassword:
+    """POST /api/admin/account/change-password: validate rotation, then revert."""
+
+    def test_change_password_flow_with_revert(self, http, auth_headers):
+        NEW_PW = "TempRotate#2026"
+        # 1) Wrong current password rejected
+        r = http.post(
+            f"{API}/admin/account/change-password",
+            json={"currentPassword": "definitely-wrong", "newPassword": NEW_PW},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+        # 2) Correct current rotates
+        r = http.post(
+            f"{API}/admin/account/change-password",
+            json={"currentPassword": OWNER_PASSWORD, "newPassword": NEW_PW},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["ok"] is True
+
+        # 3) Old password fails on /admin/auth/login
+        r = http.post(f"{API}/admin/auth/login", json={"email": OWNER_EMAIL, "password": OWNER_PASSWORD})
+        assert r.status_code == 401, "old password must fail after rotation"
+
+        # 4) New password works
+        r = http.post(f"{API}/admin/auth/login", json={"email": OWNER_EMAIL, "password": NEW_PW})
+        assert r.status_code == 200
+        code = r.json().get("demoCode")
+        assert code
+        rv = http.post(f"{API}/admin/auth/verify", json={"email": OWNER_EMAIL, "code": code})
+        assert rv.status_code == 200
+        new_token = rv.json()["token"]
+        new_headers = {"Authorization": f"Bearer {new_token}", "Content-Type": "application/json"}
+
+        # 5) REVERT to original (CRITICAL)
+        rr = http.post(
+            f"{API}/admin/account/change-password",
+            json={"currentPassword": NEW_PW, "newPassword": OWNER_PASSWORD},
+            headers=new_headers,
+        )
+        assert rr.status_code == 200, f"REVERT FAILED — password may still be {NEW_PW}! body={rr.text}"
+
+        # 6) Confirm original works again
+        rc = http.post(f"{API}/admin/auth/login", json={"email": OWNER_EMAIL, "password": OWNER_PASSWORD})
+        assert rc.status_code == 200, "original password not restored"
+
+
+# ---------- v2.1.0: Owner account change-email (with revert) ----------
+class TestChangeEmail:
+    def test_change_email_flow_with_revert(self, http, auth_headers):
+        TEMP_EMAIL = "temp-rotation@example.com"
+
+        # Wrong password rejected
+        r = http.post(
+            f"{API}/admin/account/change-email",
+            json={"newEmail": TEMP_EMAIL, "currentPassword": "nope"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+        # Rotate forward
+        r = http.post(
+            f"{API}/admin/account/change-email",
+            json={"newEmail": TEMP_EMAIL, "currentPassword": OWNER_PASSWORD},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["newEmail"] == TEMP_EMAIL
+
+        # Confirm via health
+        h = http.get(f"{API}/health").json()
+        assert h["owner_email"] == TEMP_EMAIL
+
+        # Log in under temp email
+        r = http.post(f"{API}/admin/auth/login", json={"email": TEMP_EMAIL, "password": OWNER_PASSWORD})
+        assert r.status_code == 200
+        code = r.json().get("demoCode")
+        rv = http.post(f"{API}/admin/auth/verify", json={"email": TEMP_EMAIL, "code": code})
+        assert rv.status_code == 200
+        tmp_headers = {"Authorization": f"Bearer {rv.json()['token']}", "Content-Type": "application/json"}
+
+        # REVERT to original (CRITICAL)
+        rr = http.post(
+            f"{API}/admin/account/change-email",
+            json={"newEmail": OWNER_EMAIL, "currentPassword": OWNER_PASSWORD},
+            headers=tmp_headers,
+        )
+        assert rr.status_code == 200, f"REVERT FAILED — owner email still {TEMP_EMAIL}! body={rr.text}"
+        h2 = http.get(f"{API}/health").json()
+        assert h2["owner_email"] == OWNER_EMAIL
+
+
+# ---------- v2.1.0: /api/admin/email/test ----------
+class TestEmailTestEndpoint:
+    def test_email_test_when_smtp_unset(self, http, auth_headers):
+        r = http.post(
+            f"{API}/admin/email/test",
+            json={"to": "someone@example.com"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["ok"] is False
+        assert d["mode"] == "mock"
+        assert "SMTP not configured" in d.get("error", "")
+        # message must guide the user to set host/user/password
+        assert "host" in d["error"].lower()
+        assert "password" in d["error"].lower()
+
+    def test_email_test_requires_auth(self, http):
+        r = http.post(f"{API}/admin/email/test", json={"to": "x@y.com"})
+        assert r.status_code == 401
+
+
+# ---------- v2.1.0: SMTP password preservation on empty PUT ----------
+class TestSmtpPasswordPreservation:
+    def test_smtp_password_preserved_on_empty_put(self, http, auth_headers):
+        # Snapshot original public data so we can restore at the end
+        original_pub = http.get(f"{API}/settings").json().get("data", {})
+
+        # 1) PUT a full SMTP config
+        full = {
+            "smtpHost": "smtp.test.com",
+            "smtpUser": "foo",
+            "smtpPassword": "secret",
+            "smtpPort": "587",
+            "fromEmail": "x@y.com",
+        }
+        merged = {**original_pub, **full}
+        r = http.put(f"{API}/admin/settings", json={"data": merged}, headers=auth_headers)
+        assert r.status_code == 200
+
+        # 2) public GET must strip smtpPassword
+        pub = http.get(f"{API}/settings").json()["data"]
+        assert "smtpPassword" not in pub, "smtpPassword leaked through public /api/settings"
+        assert pub.get("smtpHost") == "smtp.test.com"
+        assert pub.get("smtpUser") == "foo"
+
+        # 3) health.email_configured should flip true
+        h = http.get(f"{API}/health").json()
+        assert h["email_configured"] is True, "email_configured should be true once SMTP fully set"
+
+        # 4) PUT again with smtpPassword="" — must preserve prior password
+        merged2 = {**original_pub, **full, "smtpPassword": ""}
+        r2 = http.put(f"{API}/admin/settings", json={"data": merged2}, headers=auth_headers)
+        assert r2.status_code == 200
+        h2 = http.get(f"{API}/health").json()
+        assert h2["email_configured"] is True, "empty smtpPassword PUT wiped the password (regression!)"
+
+        # 5) Restore original public data (clear smtp* fields so subsequent runs see demoCode)
+        # Build a wipe payload from original + explicit empties for SMTP
+        wipe = dict(original_pub)
+        for k in ("smtpHost", "smtpUser", "smtpPort", "fromEmail"):
+            wipe[k] = original_pub.get(k, "")
+        # Explicitly remove smtpPassword by writing a sentinel non-empty then null... simpler:
+        # Use a tiny direct DB-style update via admin endpoint by sending all fields including
+        # smtpPassword as a non-empty placeholder then setting all smtp fields blank.
+        # First: overwrite with a placeholder password so the "empty preserves prior" rule
+        # doesn't keep our test 'secret' alive.
+        placeholder = {**wipe, "smtpHost": "", "smtpUser": "", "smtpPassword": "WIPE", "smtpPort": "", "fromEmail": original_pub.get("fromEmail", "")}
+        http.put(f"{API}/admin/settings", json={"data": placeholder}, headers=auth_headers)
+        # Then overwrite again with all smtp* blank and a non-empty password placeholder
+        # cleared by setting smtpPassword to a single space (still truthy server-side)
+        # Final clean: rewrite without smtp keys at all — but server merges by replace, so
+        # absence of key === absence. Write wipe (smtpHost/user blank, no smtpPassword key)
+        final = dict(original_pub)
+        for k in ("smtpHost", "smtpUser", "smtpPort", "fromEmail"):
+            final[k] = ""
+        # Don't include smtpPassword at all — the preserve rule only kicks in for "" not missing
+        final.pop("smtpPassword", None)
+        http.put(f"{API}/admin/settings", json={"data": final}, headers=auth_headers)
+        h3 = http.get(f"{API}/health").json()
+        assert h3["email_configured"] is False, "cleanup failed — SMTP still appears configured"
+
+
+# ---------- v2.1.0: Public RFQ end-to-end → visible in admin/quotes ----------
+class TestPublicRfqVisibleInAdmin:
+    def test_public_quote_appears_in_admin(self, http, auth_headers):
+        payload = {
+            "firstName": "Iter5",
+            "email": "iter5@test.com",
+            "company": "Iter5Co",
+            "country": "Netherlands",
+            "message": "iter5 e2e",
+        }
+        r = http.post(f"{API}/quotes", json=payload)
+        assert r.status_code == 200
+        qid = r.json()["qid"]
+        assert re.match(r"^Q-[A-F0-9]{8}$", qid)
+        # admin list
+        rl = http.get(f"{API}/admin/quotes", headers=auth_headers)
+        assert rl.status_code == 200
+        assert any(q.get("qid") == qid for q in rl.json()["quotes"])

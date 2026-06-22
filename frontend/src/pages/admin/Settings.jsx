@@ -5,10 +5,11 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
-import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw, ImageIcon, MapPin, Search, Check, Trash2, ExternalLink } from 'lucide-react';
+import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw, ImageIcon, MapPin, Search, Check, ExternalLink, KeyRound, SendHorizontal, Loader2, CloudCheck, CloudOff } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { useSiteConfig, SITE_CONFIG_DEFAULTS } from '../../context/SiteConfigContext';
 import { ALL_COUNTRIES } from '../../data/countries';
+import { api } from '../../lib/api';
 
 const fileToDataUrl = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();
@@ -36,10 +37,15 @@ const Section = ({ icon: Icon, title, hint, children, testId }) => (
 );
 
 const AdminSettings = () => {
-  const { config, updateConfig, resetConfig } = useSiteConfig();
+  const { config, updateConfig, resetConfig, saveToServer, serverSynced, hydrating } = useSiteConfig();
   const logoFileRef = useRef(null);
   const ogFileRef = useRef(null);
   const [countryQuery, setCountryQuery] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [savingPw, setSavingPw] = useState(false);
 
   const update = (k) => (v) => updateConfig({ [k]: typeof v === 'object' && v?.target ? v.target.value : v });
 
@@ -70,11 +76,59 @@ const AdminSettings = () => {
   const allowAllCountries = () => updateConfig({ allowedCountries: [] });
   const selectOnlyCountries = (codes) => updateConfig({ allowedCountries: codes });
 
-  const save = () => toast({ title: 'Settings saved', description: 'All site-wide changes are live across every page.' });
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveToServer();
+      toast({ title: 'Settings saved', description: 'Changes live across every device.' });
+    } catch (e) {
+      toast({ title: 'Save failed', description: e?.message || 'Backend unreachable. Settings remain in browser cache.' });
+    } finally {
+      setSaving(false);
+    }
+  };
   const reset = () => {
     if (window.confirm('Reset all site settings to defaults? Your logo, products and overrides will be cleared.')) {
       resetConfig();
-      toast({ title: 'Settings reset', description: 'Defaults restored.' });
+      toast({ title: 'Settings reset', description: 'Defaults restored. Press Save to push to server.' });
+    }
+  };
+
+  const runEmailTest = async () => {
+    const to = (testEmail || config.notifyEmail || '').trim();
+    if (!to) { toast({ title: 'Pick a recipient', description: 'Enter an email to receive the test message.' }); return; }
+    setTestingEmail(true);
+    try {
+      // Make sure latest SMTP creds are on the server before testing
+      await saveToServer();
+      const res = await api.adminEmailTest(to);
+      if (res.ok && res.mode === 'smtp') {
+        toast({ title: 'Test email sent ✓', description: `Delivered to ${to}.` });
+      } else if (res.mode === 'mock') {
+        toast({ title: 'SMTP not configured', description: 'Fill in host/user/password above, save, and try again.' });
+      } else {
+        toast({ title: 'Test failed', description: res.error || 'Check your SMTP credentials.' });
+      }
+    } catch (e) {
+      toast({ title: 'Test failed', description: e?.message || 'Network error' });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (!pwForm.current || !pwForm.next) { toast({ title: 'Fill all fields' }); return; }
+    if (pwForm.next.length < 8) { toast({ title: 'Password too short', description: 'At least 8 characters.' }); return; }
+    if (pwForm.next !== pwForm.confirm) { toast({ title: 'Passwords do not match' }); return; }
+    setSavingPw(true);
+    try {
+      await api.adminChangePassword(pwForm.current, pwForm.next);
+      toast({ title: 'Password changed ✓', description: 'Use the new password next time you sign in.' });
+      setPwForm({ current: '', next: '', confirm: '' });
+    } catch (e) {
+      toast({ title: 'Could not change password', description: e?.message || 'Please try again' });
+    } finally {
+      setSavingPw(false);
     }
   };
 
@@ -91,13 +145,23 @@ const AdminSettings = () => {
         <div>
           <h1 className="text-white font-black text-2xl sm:text-3xl tracking-tight">Site Settings</h1>
           <p className="text-neutral-500 text-sm mt-1">Edit content, brand, contact, social links, email, SEO, countries, and domain — visible site-wide.</p>
+          <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] tracking-widest uppercase">
+            {hydrating ? (
+              <span className="text-neutral-500 inline-flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Syncing…</span>
+            ) : serverSynced ? (
+              <span className="text-emerald-400 inline-flex items-center gap-1.5"><CloudCheck className="w-3.5 h-3.5" /> Synced with server</span>
+            ) : (
+              <span className="text-amber-400 inline-flex items-center gap-1.5"><CloudOff className="w-3.5 h-3.5" /> Local-only — press Save to push</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={reset} variant="outline" className="border-neutral-700 hover:border-orange-500 text-neutral-200 hover:text-orange-500 bg-transparent rounded-none h-10" data-testid="settings-reset-btn">
             <RotateCcw className="w-4 h-4 mr-2" /> Reset
           </Button>
-          <Button onClick={save} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10" data-testid="settings-save-btn">
-            <Save className="w-4 h-4 mr-2" /> Save
+          <Button onClick={save} disabled={saving} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10 disabled:opacity-60" data-testid="settings-save-btn">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {saving ? 'Saving…' : 'Save'}
           </Button>
         </div>
       </div>
@@ -285,12 +349,55 @@ const AdminSettings = () => {
           </div>
           {config.emailProvider === 'smtp' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-5 border-t border-neutral-900">
-              <Field label="SMTP Host"><Input value={config.smtpHost} onChange={update('smtpHost')} className={stdInput} /></Field>
-              <Field label="Port"><Input value={config.smtpPort} onChange={update('smtpPort')} className={stdInput} /></Field>
-              <Field label="Username"><Input value={config.smtpUser} onChange={update('smtpUser')} className={stdInput} /></Field>
-              <Field label="Password / App Password"><Input type="password" value={config.smtpPassword} onChange={update('smtpPassword')} className={stdInput} /></Field>
+              <Field label="SMTP Host"><Input value={config.smtpHost} onChange={update('smtpHost')} placeholder="smtp.gmail.com" className={stdInput} data-testid="settings-smtp-host" /></Field>
+              <Field label="Port"><Input value={config.smtpPort} onChange={update('smtpPort')} placeholder="587" className={stdInput} /></Field>
+              <Field label="Username"><Input value={config.smtpUser} onChange={update('smtpUser')} placeholder="you@gmail.com" className={stdInput} data-testid="settings-smtp-user" /></Field>
+              <Field label="Password / App Password">
+                <Input
+                  type="password"
+                  value={config.smtpPassword}
+                  onChange={update('smtpPassword')}
+                  placeholder={serverSynced ? '(stored — leave empty to keep)' : 'xxxx xxxx xxxx xxxx'}
+                  className={stdInput}
+                  data-testid="settings-smtp-password"
+                />
+                <p className="text-[10px] text-neutral-500 mt-1">For Gmail: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">create an App Password</a> (requires 2-Step Verification).</p>
+              </Field>
             </div>
           )}
+          {/* Send test email */}
+          <div className="mt-5 pt-5 border-t border-neutral-900 flex flex-col sm:flex-row sm:items-end gap-3">
+            <Field label="Send a test email to" className="flex-1">
+              <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder={config.notifyEmail} className={stdInput} data-testid="settings-test-email-to" />
+            </Field>
+            <Button onClick={runEmailTest} disabled={testingEmail} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10 px-5 disabled:opacity-60" data-testid="settings-test-email-btn">
+              {testingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <SendHorizontal className="w-4 h-4 mr-2" />}
+              {testingEmail ? 'Sending…' : 'Send test'}
+            </Button>
+          </div>
+          <p className="text-[11px] text-neutral-500 mt-3 inline-flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Password is encrypted at rest on the server and never exposed via the public API.</p>
+        </Section>
+
+        {/* CHANGE PASSWORD */}
+        <Section icon={KeyRound} title="Owner Account" hint="Change your sign-in password from here. Used for /admin/login + OTP flow." testId="settings-account">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Field label="Current Password">
+              <Input type="password" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} className={stdInput} data-testid="settings-pw-current" />
+            </Field>
+            <Field label="New Password (≥ 8 chars)">
+              <Input type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} className={stdInput} data-testid="settings-pw-new" />
+            </Field>
+            <Field label="Confirm New Password">
+              <Input type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} className={stdInput} data-testid="settings-pw-confirm" />
+            </Field>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button onClick={changePassword} disabled={savingPw} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10 disabled:opacity-60" data-testid="settings-pw-save">
+              {savingPw ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <KeyRound className="w-4 h-4 mr-2" />}
+              {savingPw ? 'Saving…' : 'Change password'}
+            </Button>
+            <span className="text-[11px] text-neutral-500">Password is stored as a bcrypt hash on the server.</span>
+          </div>
         </Section>
 
         {/* NOTIFICATIONS */}

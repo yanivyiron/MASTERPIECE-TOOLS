@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { MOCK_ADMIN } from '../mock';
+import { api, setToken, clearToken, getToken } from '../lib/api';
 
 const AuthContext = createContext(null);
 const KEY = 'mpt_admin_session';
@@ -11,8 +11,7 @@ export const AuthProvider = ({ children }) => {
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   });
-
-  const [pendingCode, setPendingCode] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState(null);
 
   useEffect(() => {
     try {
@@ -21,33 +20,49 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {/* ignore */ }
   }, [user]);
 
-  // MOCK: request a 6-digit verification code (in real backend it will be emailed)
+  // Validate the stored JWT on boot — if it's been revoked or expired, log out.
+  useEffect(() => {
+    if (!user || !getToken()) return;
+    api.adminMe().catch((err) => {
+      if (err?.status === 401) {
+        setUser(null);
+        clearToken();
+      }
+    });
+  }, [user]);
+
+  // Step 1 — verify email + password, ask backend to send OTP
   const requestCode = useCallback(async (email, password) => {
-    await new Promise(r => setTimeout(r, 600));
-    if (email !== MOCK_ADMIN.email || password !== MOCK_ADMIN.password) {
-      return { ok: false, error: 'Invalid email or password' };
+    try {
+      const res = await api.adminLogin(email, password);
+      setPendingEmail(email);
+      return { ok: true, demoCode: res.demoCode, emailMode: res.email_mode };
+    } catch (e) {
+      return { ok: false, error: e?.message || 'Login failed' };
     }
-    // generate code (mock — in real backend this is sent via email)
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setPendingCode({ email, code });
-    // For demo only — show code in console (in production: never log!)
-    console.info('[MOCK] verification code:', code);
-    return { ok: true, demoCode: code };
   }, []);
 
+  // Step 2 — verify OTP → JWT
   const verifyCode = useCallback(async (code) => {
-    await new Promise(r => setTimeout(r, 400));
-    if (!pendingCode) return { ok: false, error: 'Request a code first' };
-    if (pendingCode.code !== code) return { ok: false, error: 'Invalid code' };
-    setUser({ email: pendingCode.email, name: 'Yaniv (Owner)', role: 'owner', loginAt: new Date().toISOString() });
-    setPendingCode(null);
-    return { ok: true };
-  }, [pendingCode]);
+    if (!pendingEmail) return { ok: false, error: 'Request a code first' };
+    try {
+      const res = await api.adminVerify(pendingEmail, code);
+      setToken(res.token);
+      setUser({ email: res.owner.email, name: res.owner.name || 'Owner', role: res.owner.role, loginAt: new Date().toISOString() });
+      setPendingEmail(null);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e?.message || 'Verification failed' };
+    }
+  }, [pendingEmail]);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(() => {
+    clearToken();
+    setUser(null);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, requestCode, verifyCode, logout, pendingCode }}>
+    <AuthContext.Provider value={{ user, requestCode, verifyCode, logout, pendingEmail }}>
       {children}
     </AuthContext.Provider>
   );

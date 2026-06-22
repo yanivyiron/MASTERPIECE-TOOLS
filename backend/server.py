@@ -1,23 +1,33 @@
-"""Masterpiece Tools — FastAPI backend.
+"""Masterpiece Tools — FastAPI backend (v2.1).
+
+Everything the owner needs to configure is exposed via /api/admin/* — so the website is
+fully self-serviceable. No env vars required for day-to-day operation.
 
 Endpoints
 ---------
 Public:
   GET    /api/health
-  GET    /api/settings              — public site settings (logo, links, allowedCountries, hero/SEO copy)
-  POST   /api/quotes                — submit RFQ + send notification emails (best-effort SMTP)
+  GET    /api/settings              — public site settings (sensitive fields stripped)
+  POST   /api/quotes                — submit RFQ + send notification emails
 
 Owner / admin (JWT bearer):
-  POST   /api/admin/auth/login      — email+password → triggers OTP, returns demoCode in dev
+  POST   /api/admin/auth/login      — email+password → triggers OTP
   POST   /api/admin/auth/verify     — email+code → JWT
-  GET    /api/admin/me              — current owner
-  GET    /api/admin/quotes          — list submitted RFQs
-  PATCH  /api/admin/quotes/{id}     — update status / notes
-  PUT    /api/admin/settings        — replace settings doc
-  POST   /api/admin/customers       — (no-op for now)
-  GET    /api/admin/customers       — derived from quotes
+  POST   /api/admin/account/change-password
+  POST   /api/admin/account/change-email
+  GET    /api/admin/me
+  GET    /api/admin/quotes
+  PATCH  /api/admin/quotes/{id}
+  POST   /api/admin/quotes/{id}/reply
+  GET    /api/admin/customers
+  PUT    /api/admin/settings        — replace site settings
+  POST   /api/admin/email/test      — owner-triggered SMTP probe
+  GET    /api/admin/products
+  POST   /api/admin/products
+  PUT    /api/admin/products/{id}
+  DELETE /api/admin/products/{id}
 """
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -27,14 +37,16 @@ from pathlib import Path
 from datetime import datetime, timezone
 import os
 import logging
-import uuid
 
 from base import BaseDocument, now_iso, new_uuid
 from auth import (
     verify_owner, issue_otp, verify_otp, issue_jwt, require_owner,
-    OWNER_EMAIL,
+    change_owner_password, change_owner_email, get_owner_email,
 )
-from email_service import send_email, render_rfq_owner, render_rfq_customer, email_configured
+from email_service import (
+    send_email, render_rfq_owner, render_rfq_customer,
+    email_configured, get_notify_email, send_test_email,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -42,14 +54,16 @@ load_dotenv(ROOT_DIR / ".env")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("mpt")
 
-# Mongo
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-# FastAPI
-app = FastAPI(title="Masterpiece Tools API", version="2.0.0")
+app = FastAPI(title="Masterpiece Tools API", version="2.1.0")
 api = APIRouter(prefix="/api")
+
+# Settings fields that must NEVER leave the backend
+SENSITIVE_SETTINGS = {"smtpPassword"}
+
 
 # ============================================================
 # Models
@@ -58,6 +72,7 @@ class StatusCheck(BaseModel):
     id: str = Field(default_factory=new_uuid)
     client_name: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 
 class StatusCheckCreate(BaseModel):
     client_name: str
@@ -99,7 +114,7 @@ class Quote(BaseDocument):
     productTypes: Dict[str, bool] = {}
     items: List[Dict[str, Any]] = []
     files: List[str] = []
-    status: str = "new"           # new / contacted / quoted / won / lost
+    status: str = "new"
     adminNotes: Optional[str] = ""
     createdAt: str = Field(default_factory=now_iso)
     updatedAt: str = Field(default_factory=now_iso)
@@ -108,6 +123,11 @@ class Quote(BaseDocument):
 class QuoteUpdate(BaseModel):
     status: Optional[str] = None
     adminNotes: Optional[str] = None
+
+
+class QuoteReply(BaseModel):
+    message: str = Field(min_length=1, max_length=10000)
+    subject: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -120,10 +140,40 @@ class VerifyRequest(BaseModel):
     code: str = Field(min_length=4, max_length=8)
 
 
-class Settings(BaseDocument):
-    # Mirrors the frontend SiteConfigContext defaults — kept as a flat dict to avoid lock-in.
-    data: Dict[str, Any] = {}
-    updatedAt: str = Field(default_factory=now_iso)
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str = Field(min_length=1)
+    newPassword: str = Field(min_length=8, max_length=128)
+
+
+class ChangeEmailRequest(BaseModel):
+    newEmail: EmailStr
+    currentPassword: str = Field(min_length=1)
+
+
+class EmailTestRequest(BaseModel):
+    to: EmailStr
+
+
+class ProductIn(BaseModel):
+    slug: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=200)
+    desc: Optional[str] = ""
+    category: str = "precision-gauges"
+    subcategory: Optional[str] = ""
+    image: Optional[str] = ""
+    specSheet: Optional[str] = ""          # data URL or absolute URL
+    specSheetName: Optional[str] = ""
+    specs: Dict[str, Any] = {}
+    features: List[str] = []
+    leadTime: Optional[str] = "2-4 weeks"
+    badge: Optional[str] = "precision"
+
+
+# ============================================================
+# Helpers
+# ============================================================
+def _strip_sensitive(d: dict) -> dict:
+    return {k: v for k, v in (d or {}).items() if k not in SENSITIVE_SETTINGS}
 
 
 # ============================================================
@@ -134,9 +184,9 @@ async def health():
     return {
         "ok": True,
         "service": "masterpiece-tools-api",
-        "version": "2.0.0",
-        "email_configured": email_configured(),
-        "owner_email": OWNER_EMAIL,
+        "version": "2.1.0",
+        "email_configured": await email_configured(),
+        "owner_email": await get_owner_email(),
     }
 
 
@@ -165,23 +215,24 @@ async def get_status_checks():
 
 @api.get("/settings")
 async def get_public_settings():
-    """Public, read-only view of the site settings (used by the frontend to hydrate config)."""
+    """Public read of site settings (sensitive fields like SMTP password stripped)."""
     doc = await db.settings.find_one({"_id": "site"})
     if not doc:
         return {"data": {}}
-    return {"data": doc.get("data", {}), "updatedAt": doc.get("updatedAt")}
+    return {"data": _strip_sensitive(doc.get("data", {})), "updatedAt": doc.get("updatedAt")}
 
 
-def _send_quote_emails(qid: str, payload: dict, owner_email: str):
-    """Background task — best-effort SMTP."""
+async def _send_quote_emails(qid: str, payload: dict):
+    """Background task — best-effort SMTP using DB config."""
     try:
-        send_email(
+        owner_email = await get_notify_email()
+        await send_email(
             to=owner_email,
             subject=f"[Masterpiece] New RFQ — {qid} from {payload.get('company')}",
             html=render_rfq_owner({**payload, "id": qid, "createdAt": now_iso()}),
             reply_to=payload.get("email"),
         )
-        send_email(
+        await send_email(
             to=payload.get("email"),
             subject=f"Masterpiece Tools — your quote request {qid}",
             html=render_rfq_customer({**payload, "id": qid}),
@@ -195,9 +246,8 @@ async def submit_quote(body: QuoteCreate, background: BackgroundTasks):
     qobj = Quote(**body.model_dump())
     doc = qobj.to_mongo()
     await db.quotes.insert_one(doc)
-    owner_email = os.environ.get("NOTIFY_EMAIL") or OWNER_EMAIL
-    background.add_task(_send_quote_emails, qobj.qid, body.model_dump(), owner_email)
-    return {"ok": True, "qid": qobj.qid, "email_mode": ("smtp" if email_configured() else "mock")}
+    background.add_task(_send_quote_emails, qobj.qid, body.model_dump())
+    return {"ok": True, "qid": qobj.qid, "email_mode": ("smtp" if await email_configured() else "mock")}
 
 
 # ============================================================
@@ -205,34 +255,51 @@ async def submit_quote(body: QuoteCreate, background: BackgroundTasks):
 # ============================================================
 @api.post("/admin/auth/login")
 async def admin_login(body: LoginRequest):
-    if not verify_owner(body.email, body.password):
+    if not await verify_owner(body.email, body.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     code = issue_otp(body.email)
-    sent = send_email(
+    sent = await send_email(
         to=body.email,
         subject="Your Masterpiece owner verification code",
         html=f"<p style='font-family:Arial'>Your verification code is <strong style='font-size:24px;letter-spacing:6px'>{code}</strong>.<br/>This code expires in 10 minutes.</p>",
     )
     payload: Dict[str, Any] = {"ok": True, "email_mode": sent.get("mode", "mock"), "ttlSeconds": 600}
-    # In dev / preview without SMTP configured we surface the code in the response for testing.
-    if not email_configured():
+    # In dev / when SMTP isn't configured we surface the code so the owner can still log in.
+    if not await email_configured():
         payload["demoCode"] = code
     return payload
 
 
 @api.post("/admin/auth/verify")
 async def admin_verify(body: VerifyRequest):
-    if body.email.lower().strip() != OWNER_EMAIL.lower().strip():
+    owner_email = await get_owner_email()
+    if body.email.lower().strip() != owner_email.lower().strip():
         raise HTTPException(status_code=401, detail="Invalid email")
     if not verify_otp(body.email, body.code):
         raise HTTPException(status_code=401, detail="Invalid or expired code")
     token = issue_jwt(body.email)
-    return {"ok": True, "token": token, "owner": {"email": OWNER_EMAIL, "name": "Owner", "role": "owner"}}
+    return {"ok": True, "token": token, "owner": {"email": owner_email, "name": "Owner", "role": "owner"}}
 
 
 @api.get("/admin/me")
 async def admin_me(auth=Depends(require_owner)):
-    return {"email": auth["sub"], "role": auth.get("role")}
+    return {"email": auth["sub"], "role": auth.get("role"), "email_configured": await email_configured()}
+
+
+@api.post("/admin/account/change-password")
+async def admin_change_password(body: ChangePasswordRequest, auth=Depends(require_owner)):
+    ok = await change_owner_password(body.currentPassword, body.newPassword)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    return {"ok": True}
+
+
+@api.post("/admin/account/change-email")
+async def admin_change_email(body: ChangeEmailRequest, auth=Depends(require_owner)):
+    if not await verify_owner(await get_owner_email(), body.currentPassword):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    await change_owner_email(body.newEmail)
+    return {"ok": True, "newEmail": body.newEmail}
 
 
 # ============================================================
@@ -244,11 +311,9 @@ async def admin_list_quotes(auth=Depends(require_owner), limit: int = 100, statu
     if status_filter:
         q["status"] = status_filter
     rows = await db.quotes.find(q).sort("createdAt", -1).limit(min(max(limit, 1), 500)).to_list(None)
-    out = []
     for r in rows:
         r.pop("_id", None)
-        out.append(r)
-    return {"quotes": out, "count": len(out)}
+    return {"quotes": rows, "count": len(rows)}
 
 
 @api.patch("/admin/quotes/{qid}")
@@ -263,26 +328,19 @@ async def admin_update_quote(qid: str, body: QuoteUpdate, auth=Depends(require_o
     return {"ok": True}
 
 
-class QuoteReply(BaseModel):
-    message: str = Field(min_length=1, max_length=10000)
-    subject: Optional[str] = None
-
-
 @api.post("/admin/quotes/{qid}/reply")
 async def admin_reply_quote(qid: str, body: QuoteReply, auth=Depends(require_owner)):
-    """Send an email reply to the customer for this quote."""
     doc = await db.quotes.find_one({"qid": qid})
     if not doc:
         raise HTTPException(status_code=404, detail="Quote not found")
     message = body.message.strip()
     subject = body.subject or f"Re: your Masterpiece quote {qid}"
-    res = send_email(
+    res = await send_email(
         to=doc["email"],
         subject=subject,
         html=f"<div style='font-family:Arial;line-height:1.6'>{message}</div>",
-        reply_to=os.environ.get("REPLY_TO_EMAIL") or OWNER_EMAIL,
+        reply_to=await get_notify_email(),
     )
-    # Append to a replies log on the document
     await db.quotes.update_one(
         {"qid": qid},
         {"$push": {"replies": {"at": now_iso(), "by": auth["sub"], "subject": subject, "message": message, "mode": res.get("mode")}}},
@@ -291,7 +349,7 @@ async def admin_reply_quote(qid: str, body: QuoteReply, auth=Depends(require_own
 
 
 # ============================================================
-# Admin customers (derived view)
+# Admin customers (derived)
 # ============================================================
 @api.get("/admin/customers")
 async def admin_list_customers(auth=Depends(require_owner)):
@@ -317,8 +375,19 @@ async def admin_list_customers(auth=Depends(require_owner)):
 # ============================================================
 @api.put("/admin/settings")
 async def admin_put_settings(body: Dict[str, Any], auth=Depends(require_owner)):
-    """Replace the site settings document. Body should be the full settings object."""
-    data = body.get("data") or body
+    """Replace the site settings document. Body may be either {data:{...}} or the raw settings object."""
+    data = body.get("data") if "data" in body else body
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+
+    # If smtpPassword is empty string, preserve the previously-stored value so the UI
+    # doesn't accidentally wipe the password when the field is blank.
+    if data.get("smtpPassword") == "":
+        existing = await db.settings.find_one({"_id": "site"})
+        prior_pw = (existing or {}).get("data", {}).get("smtpPassword")
+        if prior_pw:
+            data["smtpPassword"] = prior_pw
+
     await db.settings.update_one(
         {"_id": "site"},
         {"$set": {"data": data, "updatedAt": now_iso()}},
@@ -328,7 +397,66 @@ async def admin_put_settings(body: Dict[str, Any], auth=Depends(require_owner)):
 
 
 # ============================================================
-# Wire up app
+# Email test
+# ============================================================
+@api.post("/admin/email/test")
+async def admin_email_test(body: EmailTestRequest, auth=Depends(require_owner)):
+    res = await send_test_email(body.to)
+    return res
+
+
+# ============================================================
+# Admin products (CRUD)
+# ============================================================
+@api.get("/admin/products")
+async def admin_list_products(auth=Depends(require_owner)):
+    rows = await db.products.find({}).sort("createdAt", -1).to_list(None)
+    for r in rows:
+        r["id"] = str(r.pop("_id"))
+    return {"products": rows, "count": len(rows)}
+
+
+@api.post("/admin/products")
+async def admin_create_product(body: ProductIn, auth=Depends(require_owner)):
+    doc = body.model_dump()
+    doc["createdAt"] = now_iso()
+    doc["updatedAt"] = now_iso()
+    result = await db.products.insert_one(doc)
+    doc["id"] = str(result.inserted_id)
+    doc.pop("_id", None)
+    return {"ok": True, "product": doc}
+
+
+@api.put("/admin/products/{pid}")
+async def admin_update_product(pid: str, body: ProductIn, auth=Depends(require_owner)):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(pid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid product id")
+    patch = body.model_dump()
+    patch["updatedAt"] = now_iso()
+    result = await db.products.update_one({"_id": oid}, {"$set": patch})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"ok": True}
+
+
+@api.delete("/admin/products/{pid}")
+async def admin_delete_product(pid: str, auth=Depends(require_owner)):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(pid)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid product id")
+    result = await db.products.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"ok": True}
+
+
+# ============================================================
+# Wire up
 # ============================================================
 app.include_router(api)
 

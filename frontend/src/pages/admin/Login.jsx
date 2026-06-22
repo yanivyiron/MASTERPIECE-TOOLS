@@ -33,7 +33,11 @@ const AdminLogin = () => {
       return;
     }
     setStep(2);
-    setHint(`DEMO code: ${res.demoCode} (in production this will be emailed)`);
+    if (res.demoCode) {
+      setHint(`Demo code: ${res.demoCode} (SMTP is not configured — code is shown here until you set it up in Admin → Settings → Email Provider).`);
+    } else {
+      setHint(`Code sent to ${email}. Check your inbox.`);
+    }
   };
 
   const verify = async (e) => {
@@ -75,7 +79,7 @@ const AdminLogin = () => {
               <Button type="submit" disabled={busy} className="w-full bg-orange-500 hover:bg-orange-400 rounded-none h-11 disabled:opacity-50">
                 {busy ? 'Sending...' : <>{t('admin.requestCode')} <ArrowRight className="w-4 h-4 ml-2" /></>}
               </Button>
-              <p className="text-[11px] text-neutral-500 text-center">Demo credentials are pre-loaded. (Mock auth — will be replaced by backend.)</p>
+              <p className="text-[11px] text-neutral-500 text-center">A 6-digit code will be emailed for verification. (While SMTP is unset, the code appears on the next screen.)</p>
             </form>
           ) : (
             <form onSubmit={verify} className="space-y-5">
