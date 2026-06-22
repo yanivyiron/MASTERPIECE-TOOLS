@@ -66,14 +66,14 @@ const AdminLogin = () => {
                 <Label className="text-neutral-400 text-xs uppercase tracking-widest">{t('admin.email')}</Label>
                 <div className="relative mt-2">
                   <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                  <Input value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-9 bg-black border-neutral-800 text-white h-11 focus-visible:ring-orange-500" />
+                  <Input data-testid="owner-login-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-9 bg-black border-neutral-800 text-white h-11 focus-visible:ring-orange-500" />
                 </div>
               </div>
               <div>
                 <Label className="text-neutral-400 text-xs uppercase tracking-widest">{t('admin.password')}</Label>
                 <div className="relative mt-2">
                   <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-9 bg-black border-neutral-800 text-white h-11 focus-visible:ring-orange-500" />
+                  <Input data-testid="owner-login-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-9 bg-black border-neutral-800 text-white h-11 focus-visible:ring-orange-500" />
                 </div>
               </div>
               <Button type="submit" disabled={busy} className="w-full bg-orange-500 hover:bg-orange-400 rounded-none h-11 disabled:opacity-50">

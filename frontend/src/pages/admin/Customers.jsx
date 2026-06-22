@@ -70,7 +70,6 @@ const AdminCustomers = () => {
     setBusy(true);
     try {
       const res = await api.adminEmailCustomer(emailing.email, {
-        recipients: [emailing.email],
         subject: emailing.subject,
         html: emailing.html,
         attachments: [],

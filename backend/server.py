@@ -230,6 +230,15 @@ class BulkEmailRequest(BaseModel):
     templateId: Optional[str] = None
 
 
+class SingleEmailRequest(BaseModel):
+    """Used when the recipient is determined by the URL (e.g. /admin/customers/{email}/email)."""
+    subject: str = Field(min_length=1, max_length=300)
+    html: Optional[str] = ""
+    text: Optional[str] = ""
+    attachments: List[EmailAttachment] = []
+    templateId: Optional[str] = None
+
+
 # ---- Email templates ----
 class EmailTemplateIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
@@ -510,7 +519,7 @@ async def admin_delete_customer(email: str, auth=Depends(require_perm("customers
 
 
 @api.post("/admin/customers/{email}/email")
-async def admin_email_customer(email: str, body: BulkEmailRequest, auth=Depends(require_perm("customers.email"))):
+async def admin_email_customer(email: str, body: SingleEmailRequest, auth=Depends(require_perm("customers.email"))):
     """Send a single targeted email to one customer (with optional attachments)."""
     e = email.lower().strip()
     atts = [a.model_dump() for a in (body.attachments or [])]
@@ -535,8 +544,22 @@ async def admin_email_customer(email: str, body: BulkEmailRequest, auth=Depends(
 # ============================================================
 @api.put("/admin/settings")
 async def admin_put_settings(body: Dict[str, Any], auth=Depends(require_perm("settings.edit"))):
-    """Replace the site settings document. Body may be either {data:{...}} or the raw settings object."""
-    data = body.get("data") if "data" in body else body
+    """Replace the site settings document. Body may be either {data:{...}} or the raw settings object.
+    Recursively unwraps repeated {data:{...}} wrappings to defend against accidental round-tripping
+    of the GET response straight back into PUT."""
+    data = body
+    # Unwrap until we hit the leaf object (max 10 hops as a safety cap)
+    for _ in range(10):
+        if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
+            # Heuristic: only unwrap if the inner dict looks like settings (no top-level known field outside it)
+            inner_keys = set(data["data"].keys())
+            # If the inner dict has its own "data" key, keep going; otherwise it's the leaf
+            if "data" in inner_keys and isinstance(data["data"]["data"], dict):
+                data = data["data"]
+                continue
+            data = data["data"]
+            break
+        break
     if not isinstance(data, dict):
         raise HTTPException(status_code=400, detail="Body must be an object")
 
@@ -554,6 +577,22 @@ async def admin_put_settings(body: Dict[str, Any], auth=Depends(require_perm("se
         upsert=True,
     )
     return {"ok": True, "updatedAt": now_iso()}
+
+
+@api.post("/admin/settings/repair")
+async def admin_settings_repair(auth=Depends(require_owner)):
+    """One-shot maintenance: unwrap any over-nested {data:{data:{...}}} that crept in due to the
+    pre-fix accumulation bug."""
+    doc = await db.settings.find_one({"_id": "site"}) or {}
+    data = doc.get("data")
+    hops = 0
+    while isinstance(data, dict) and "data" in data and isinstance(data["data"], dict) and hops < 20:
+        data = data["data"]
+        hops += 1
+    if hops == 0:
+        return {"ok": True, "hops": 0, "note": "Already flat."}
+    await db.settings.update_one({"_id": "site"}, {"$set": {"data": data, "updatedAt": now_iso()}}, upsert=True)
+    return {"ok": True, "hops": hops}
 
 
 # ============================================================

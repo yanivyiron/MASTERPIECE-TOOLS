@@ -136,11 +136,18 @@
 ├── AiStudio.jsx       Full conversational chat UI for the panel AI
 ```
 
-## Phase 5 — Remaining (P1)
-- Wix-like visual CMS editor on the public site (live in-page text editing, drag-and-drop sections).
-- Email template builder UI page (backend already supports CRUD).
-- Bulk-email blast UI (backend already supports `/api/admin/email/blast`).
-- Team management UI page (backend already supports `/api/admin/team`).
-- Categories CRUD UI page (backend already supports `/api/admin/categories`).
-- Quote attachments UI in admin (backend already stores them).
-- Refactor `server.py` → `/app/backend/routes/`.
+## Phase 5 — Owner Panel Frontend (✅ COMPLETE — Feb 2026)
+- `/admin/categories` — full CRUD UI with auto-translation toggle.
+- `/admin/team` — owner-only Team & permissions page with per-resource permission checkboxes (`quotes.edit`, `products.delete`, …); invite flow + delete.
+- `/admin/templates` — email template builder with live HTML preview, multiple kinds (custom / reply / rfq_owner / rfq_customer / newsletter).
+- `/admin/blast` — bulk-email composer: filter customers, select recipients, choose a template, paste HTML, attach files, send → background queue with audit history.
+- `/admin/customers` — now wired to real `/api/admin/customers`; per-customer notes / tags / blocked flag; inline "Send custom email" dialog with live preview; delete (wipes quotes too).
+- `/admin/quotes` — wired to live MongoDB: list + filter + status change + admin notes + reply (real email send) + **download attachments** + delete + past-replies log.
+- **AI Studio file upload** — paperclip button in the composer accepts PDF / text / CSV / JSON / HTML / images (up to 8 MB total); backend extracts text (via `pypdf`) and feeds it to the model so the AI can answer questions about the file.
+- **RFQ form file attachments** are now actually base64-encoded and sent (under 8 MB cap) — visible in the admin Quotes detail pane.
+
+## Bugs fixed in this batch
+- **Settings nested-data accumulation**: `PUT /api/admin/settings` now recursively unwraps `{data:{data:{...}}}` before storing. New `POST /api/admin/settings/repair` (owner-only) one-shot maintenance endpoint.
+- **`/api/admin/customers/{email}/email`**: now uses a new `SingleEmailRequest` schema (no `recipients` required, since the URL already names the recipient).
+- **Owner login form**: inputs now have `type="email"` / `type="password"` + `data-testid` (owner-login-email/password) for e2e testability.
+- **AI hallucination guard**: system prompt now explicitly forbids claiming a setting is "already X" without checking the live snapshot.
