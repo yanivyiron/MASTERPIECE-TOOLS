@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 5 — Phase 2 backend feature verification: 40/40 pytest tests PASS (26 existing + 14 new). New tests cover Categories CRUD, Team/RBAC CRUD, Email Templates CRUD, Email Blast + history, Customer update/email/delete, Quotes with attachments end-to-end (seed → list with attachment.name/data → PATCH status → POST reply → DELETE removal verified), and AI Studio (conversation create/list, send message with role+permissions reply, file upload reflected in AI response, update_settings tool call with successful Undo restoring contactPhone). Frontend admin pages /admin/ai, /admin/categories, /admin/team, /admin/templates, /admin/blast, /admin/customers, /admin/quotes all load with a valid owner JWT — zero errors on page, expected data-testids present (ai-sidebar, ai-new-conv, ai-conv-<id>, ai-chat-scroll, admin-nav-*). /admin/quotes shows 19 real quotes from MongoDB (with REPLIED status badges, attachment icons next to qids that have attachments — confirming real backend not MOCK_QUOTES). Trash icons & status dropdowns visible. Owner login form is on-page but uses unstyled inputs (no type=email/password attribute), so e2e UI login was done via localStorage JWT bypass per /app/memory/test_credentials.md.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "PUT /api/admin/settings", "issue": "Nested-data accumulation bug. The doc db.settings._id='site' has 7 levels of nested {data:{data:{...}}} because the handler only strips ONE level of {'data':...} wrapping; if the client PUTs {data: <get_response>} where the get response is already wrapped, the doc wraps deeper each time. Discovered when AI couldn't read contactPhone (hallucinated 'already set to +31 20 555 0001'). Recommend: fully unwrap nested 'data' keys in admin_put_settings until you reach the leaf object.", "priority": "HIGH"},
+      {"endpoint": "POST /api/admin/customers/{email}/email", "issue": "Uses BulkEmailRequest schema which REQUIRES a non-empty `recipients` list (Field(min_length=1)). But this endpoint already takes the customer email from the URL path and the `recipients` field is ignored inside the handler — only body.subject/html/text/attachments are used. UI must pass a dummy recipients list to avoid a 422. Fix: introduce a SingleEmailRequest(subject, html, text, attachments) schema for this endpoint.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/settings (and AI site_summary)", "issue": "AI assistant hallucinates current settings values when the site_summary fed to it lacks them. With a freshly-set contactPhone the AI replied 'already set' without calling read_settings. Mitigation: feed the actual current settings into the system prompt OR force a read_settings call before mutation."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Owner login form (/admin/login)", "issue": "Email/password inputs do not expose type='email' / type='password' attributes — only generic inputs. This made test selectors brittle. Recommend adding type+autocomplete attributes (and a data-testid='owner-login-email' / 'owner-login-password').", "selector": "input (first/second on /admin/login)", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_features": [
+    {"feature": "Categories CRUD", "evidence": "POST→200 with category.id; PUT→200; DELETE→200; list contains new slug; auth required (401 without bearer).", "status": "PASS"},
+    {"feature": "Team/RBAC CRUD", "evidence": "POST→200 returns member.id; list shows the lowercased email; PATCH permissions→200; DELETE→200.", "status": "PASS"},
+    {"feature": "Email Templates CRUD", "evidence": "POST→200 with template.id; PUT→200; DELETE→200.", "status": "PASS"},
+    {"feature": "Email Blast", "evidence": "POST /admin/email/blast with recipients=[..] → 200 {ok:true, queued:2}; GET /admin/email/history → 200 history array.", "status": "PASS"},
+    {"feature": "Customer update/email/delete", "evidence": "Seeded quote → customer appears in aggregate; PUT notes+tags+blocked→200; POST .../email (with recipients dummy)→200 ok:true; DELETE→200.", "status": "PASS"},
+    {"feature": "Quote attachments persisted end-to-end", "evidence": "POST /quotes with attachments=[{name:'test.txt',data:base64}] returns qid; GET /admin/quotes shows quote with attachments[0].name='test.txt' and data populated.", "status": "PASS"},
+    {"feature": "Quote PATCH + reply + DELETE", "evidence": "PATCH status/adminNotes→200; POST reply→200 and status becomes 'replied'; DELETE→200 and quote removed from list.", "status": "PASS"},
+    {"feature": "AI Studio conversations create/list", "evidence": "POST /admin/ai/conversations→200 returns id; GET lists it.", "status": "PASS"},
+    {"feature": "AI role+permissions reply", "evidence": "First message returns assistantMessage.content containing 'yaniv' or 'owner' — model identifies caller correctly.", "status": "PASS"},
+    {"feature": "AI update_settings + Undo", "evidence": "After resetting contactPhone to '+1 000 000 0000', asking AI to set it to '+31 20 555 0001' returns assistantMessage.actions[] with tool='update_settings' and an id. GET /settings (unwrapped) confirms phone changed. POST /admin/ai/actions/{id}/undo → ok:true and contactPhone reverts.", "status": "PASS"},
+    {"feature": "AI file upload reflected in reply", "evidence": "POST message with attachments=[{name:'hello.txt',data:b64('Hello world from a uploaded file')}] → userMessage.attachments stored, assistantMessage.content references the file content.", "status": "PASS"},
+    {"feature": "Frontend admin pages load", "evidence": "With JWT injected via localStorage, /admin/ai /categories /team /templates /blast /customers /quotes all render without redirects or .error nodes. AI Studio testids ai-sidebar, ai-new-conv, ai-chat-scroll, ai-conv-<id> all present. Quotes page shows 19 real quotes from MongoDB (REPLIED badge present, paperclip icons next to QIDs with attachments).", "status": "PASS"}
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_phase2_features.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration_5.xml"
+  ],
+  "action_items": [
+    "Fix nested-data accumulation in PUT /api/admin/settings — unwrap nested {data:{data:...}} until leaf before storing.",
+    "Replace BulkEmailRequest schema on POST /api/admin/customers/{email}/email with a SingleEmailRequest (no `recipients` required) — currently UI must pass a dummy recipients list to avoid 422.",
+    "Either inject the real current settings into the AI site_summary or force read_settings before mutating, so the AI cannot hallucinate 'already set'.",
+    "Add type='email'/'password' + data-testid on the owner login inputs for testability."
+  ],
+  "critical_code_review_comments": [
+    "admin_put_settings only does a single-level unwrap of {data:...}. Defensively unwrap recursively or validate the leaf shape.",
+    "BulkEmailRequest is reused for the single-recipient endpoint admin_email_customer — drop the `recipients` requirement there or use a dedicated schema. Otherwise the public API contract is misleading.",
+    "AI tool registry: consider giving the LLM the current settings snapshot in system content so it doesn't issue tool-calls based on hallucinated state.",
+    "/admin/customers/{email}/email accepts arbitrary HTML — fine for owner-only but please server-side strip <script> in case lower-perm roles are added later.",
+    "ai_actions undo: the undo endpoint returns ok:false silently for already-undone actions (200 status). Consider 409 Conflict for clearer client signaling.",
+    "Several admin endpoints still use Dict[str, Any] for body (e.g. PUT /admin/customers/{email}) — would benefit from Pydantic schemas.",
+    "GET /api/settings exposes deeply nested data; once the bug above is fixed, also assert the response shape in a unit test to prevent regression."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase2_features.py (NEW — 14 pytest tests covering all Phase 2 endpoints)"
+  ],
+  "success_rate": {"backend": "100% (40/40)", "frontend": "100% smoke (all 7 admin pages render, AI Studio testids confirmed, real Quotes list of 19 items loaded from MongoDB)"},
+  "test_credentials": "Owner: yaniv@masterpiece-innovations.com / Master2025! — login returns demoCode (SMTP unset). Verify with code → JWT bearer.",
+  "seed_data_creation": "test_phase2_features.py creates and immediately deletes TEST_-prefixed quotes, customers, categories, team members, and templates per test. AI Studio creates conversations that persist (the existing AI sidebar shows 25+ conversations from prior runs).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite at /app/backend/tests/ — run `pytest backend/tests/ -v` to get 40/40. Re-test items 1 & 2 in action_items after main agent fixes the settings nested-data accumulation and the customers email recipients-required bug. Frontend UI flows (basket auto-clear, RFQ attachment, AI edit-and-resend, Categories/Team/Templates/Blast/Customers/Quotes manual interactions) were NOT exhaustively click-tested via Playwright in this iteration because the owner login form lacks type=email/password attributes (made selectors brittle) — instead JWT was injected via localStorage to confirm pages render. Main agent should add the input types & data-testids before next iteration so e2e Playwright login works cleanly.",
+  "rca of the issue": "Settings nested-data bug: PUT handler does `data = body.get('data') if 'data' in body else body` — only ONE unwrap. When UI does GET /settings (returns {data:{...}}) then PUT {data: <that whole response>}, body['data']={'data':{...}} and the inner dict (still wrapped) gets stored. Multiple repetitions of this pattern across test runs produced 7 levels of nesting. Mitigation already applied to local seed via flat PUT; permanent fix is to unwrap recursively until leaf in admin_put_settings."
+}

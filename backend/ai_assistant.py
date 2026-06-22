@@ -68,6 +68,50 @@ def _strip_html(html: str, max_len: int = 12000) -> str:
     return text[:max_len]
 
 
+def extract_attachment_text(name: str, mime: str, data_url: str) -> str:
+    """Best-effort: turn a base64/data-URL attachment into plain text for the LLM."""
+    if not data_url:
+        return ""
+    try:
+        if data_url.startswith("data:"):
+            _, payload = data_url.split(",", 1)
+        else:
+            payload = data_url
+        raw = base64.b64decode(payload)
+    except Exception:
+        return ""
+    lower_mime = (mime or "").lower()
+    lower_name = (name or "").lower()
+    # Plain-text-ish
+    if any(lower_mime.startswith(x) for x in ("text/", "application/json", "application/xml", "application/csv")) or \
+       lower_name.endswith((".txt", ".md", ".json", ".csv", ".xml", ".html", ".htm", ".log", ".yml", ".yaml")):
+        try:
+            text = raw.decode("utf-8", errors="ignore")
+            if lower_name.endswith((".html", ".htm")) or "html" in lower_mime:
+                return _strip_html(text)
+            return text[:12000]
+        except Exception:
+            return ""
+    # PDF
+    if "pdf" in lower_mime or lower_name.endswith(".pdf"):
+        try:
+            from io import BytesIO
+            from pypdf import PdfReader
+            reader = PdfReader(BytesIO(raw))
+            chunks = []
+            for page in reader.pages[:30]:
+                try:
+                    chunks.append(page.extract_text() or "")
+                except Exception:
+                    pass
+            return ("\n".join(chunks))[:12000]
+        except Exception as e:
+            logger.warning("PDF extract failed for %s: %s", name, e)
+            return ""
+    # Images / binaries — we don't OCR yet; pass metadata only
+    return ""
+
+
 # ============================================================
 # Tool implementations
 # ============================================================
@@ -655,6 +699,7 @@ async def run_assistant(
     role: str,
     site_summary: Dict[str, Any],
     session_id: str,
+    attachments: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Run a single user turn. Returns {reply, actions:[{tool,args,result}], done}."""
     if not EMERGENT_LLM_KEY:
@@ -668,8 +713,15 @@ async def run_assistant(
         f"=== Caller ===\nName:  {by_name}\nEmail: {by_email}\nRole:  {role}\nPermissions: {json.dumps(permissions)}",
         "=== Live site snapshot ===",
         json.dumps(site_summary, indent=2, default=str),
-        "=== Conversation memory (older first) ===",
     ]
+    if attachments:
+        convo.append("=== Files attached by the user this turn ===")
+        for att in attachments:
+            convo.append(
+                f"-- File: {att.get('name')} | type: {att.get('type')} | size: {att.get('size')} bytes\n"
+                f"Extracted text:\n{(att.get('text') or '(binary or unsupported — only metadata available)')[:8000]}\n"
+            )
+    convo.append("=== Conversation memory (older first) ===")
     for h in history[-30:]:
         r = (h.get("role") or "user").upper()
         c = h.get("content") or ""

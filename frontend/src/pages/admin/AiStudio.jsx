@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import {
   Plus, Send, Sparkles, Loader2, Trash2, Edit3, Check, X,
   Undo2, FileText, Wrench, ShieldCheck, Search, MessageSquare, Globe, Settings as SettingsIcon,
+  Paperclip,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -132,6 +133,15 @@ const Message = ({ msg, isUser, editing, onStartEdit, onSaveEdit, onCancelEdit, 
           ) : (
             <>
               <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{msg.content}</div>
+              {(msg.attachments || []).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(msg.attachments || []).map((a, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 bg-black/30 border border-black/40 px-2 py-0.5 text-[11px] text-black/90">
+                      <FileText className="w-3 h-3" /> {a.name}
+                    </span>
+                  ))}
+                </div>
+              )}
               <button
                 onClick={() => onStartEdit(msg.id)}
                 className="absolute -left-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-orange-500 p-1.5"
@@ -168,12 +178,14 @@ const AiStudio = () => {
   const [activeId, setActiveId] = useState(null);
   const [conv, setConv] = useState(null);          // { id, title, messages: [] }
   const [draft, setDraft] = useState('');
+  const [pendingFiles, setPendingFiles] = useState([]);  // [{name,type,size,data}]
   const [sending, setSending] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [undoing, setUndoing] = useState(null);
   const textareaRef = useRef(null);
   const scrollerRef = useRef(null);
+  const fileInputRef = useRef(null);
   useAutosize(textareaRef, draft);
 
   const refreshConversations = async () => {
@@ -233,22 +245,41 @@ const AiStudio = () => {
   };
 
   const send = async () => {
-    if (!draft.trim() || sending || !activeId) return;
+    if ((!draft.trim() && pendingFiles.length === 0) || sending || !activeId) return;
     setSending(true);
-    const message = draft;
+    const message = draft || (pendingFiles.length ? `(${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} attached)` : '');
+    const attachments = pendingFiles;
     setDraft('');
+    setPendingFiles([]);
     try {
-      const res = await api.aiSendMessage(activeId, { message });
-      // Reload the conversation to grab the persisted version
+      await api.aiSendMessage(activeId, { message, attachments });
       const updated = await api.aiGetConversation(activeId);
       setConv(updated);
       await refreshConversations();
     } catch (e) {
       toast({ title: 'AI failed', description: e.message });
       setDraft(message);
+      setPendingFiles(attachments);
     } finally {
       setSending(false);
     }
+  };
+
+  const onPickFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const total = files.reduce((s, f) => s + f.size, 0);
+    if (total > 8 * 1024 * 1024) {
+      toast({ title: 'Files too large', description: 'Keep total upload under 8 MB.' });
+      return;
+    }
+    const parts = await Promise.all(files.map((f) => new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve({ name: f.name, type: f.type || '', size: f.size, data: r.result });
+      r.readAsDataURL(f);
+    })));
+    setPendingFiles((prev) => [...prev, ...parts]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const saveEdit = async (messageId, newContent) => {
@@ -379,7 +410,40 @@ const AiStudio = () => {
 
         {/* Composer */}
         <div className="border-t border-neutral-900 p-4">
+          {pendingFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2" data-testid="ai-pending-files">
+              {pendingFiles.map((f, i) => (
+                <div key={i} className="inline-flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300">
+                  <FileText className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="max-w-[180px] truncate">{f.name}</span>
+                  <span className="text-neutral-600">{Math.round(f.size / 1024)} KB</span>
+                  <button onClick={() => setPendingFiles((prev) => prev.filter((_, k) => k !== i))} className="text-neutral-500 hover:text-red-400 ml-1">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.txt,.md,.json,.csv,.xml,.html,.htm,.yml,.yaml,.log,image/*"
+              onChange={onPickFiles}
+              className="hidden"
+              data-testid="ai-file-input"
+            />
+            <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              className="border-neutral-800 hover:border-orange-500 hover:text-orange-500 bg-transparent text-neutral-400 rounded-none h-11 w-11 p-0 shrink-0"
+              data-testid="ai-attach-btn"
+              title="Attach files"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
             <Textarea
               ref={textareaRef}
               value={draft}
@@ -387,21 +451,21 @@ const AiStudio = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
               }}
-              placeholder="Ask, request changes, or just chat. Shift+Enter for a new line."
+              placeholder="Ask, request changes, or drop a file. Shift+Enter for a new line."
               className="bg-neutral-950 border-neutral-800 text-white min-h-[44px] max-h-[220px] resize-none focus-visible:ring-orange-500"
               data-testid="ai-composer"
               disabled={sending}
             />
             <Button
               onClick={send}
-              disabled={!draft.trim() || sending}
+              disabled={(!draft.trim() && pendingFiles.length === 0) || sending}
               className="bg-orange-500 hover:bg-orange-400 rounded-none h-11 disabled:opacity-50"
               data-testid="ai-send-btn"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Send</>}
             </Button>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-neutral-600 mt-2">Live actions are real. Every change is undoable. Powered by Emergent Universal Key.</div>
+          <div className="text-[10px] uppercase tracking-widest text-neutral-600 mt-2">PDF, text, CSV, JSON and HTML are extracted for the AI. Up to 8 MB total. Live actions are real. Every change is undoable.</div>
         </div>
       </div>
     </div>

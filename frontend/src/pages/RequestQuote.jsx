@@ -35,6 +35,25 @@ const RequestQuote = () => {
   const submit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    // Convert any attached files to base64 data URLs for the backend
+    const fileToDataURL = (f) => new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve({ name: f.name, type: f.type || '', size: f.size, data: r.result });
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(f);
+    });
+    let attachments = [];
+    try {
+      // Cap total upload at ~8MB to stay within JSON limits
+      let total = 0;
+      for (const f of files) {
+        if (total + f.size > 8 * 1024 * 1024) break;
+        // eslint-disable-next-line no-await-in-loop
+        const a = await fileToDataURL(f);
+        if (a) { attachments.push(a); total += f.size; }
+      }
+    } catch (e) { /* ignore */ }
+
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName || '',
@@ -47,6 +66,7 @@ const RequestQuote = () => {
       productTypes,
       items: items.map((it) => ({ id: it.id, slug: it.slug, name: productName(it, t), qty: it.qty, notes: it.notes || '', image: it.image })),
       files: files.map((f) => f.name),
+      attachments,
     };
 
     let qid = null;

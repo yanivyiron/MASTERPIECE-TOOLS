@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { MOCK_QUOTES } from '../../mock';
-import { useLang } from '../../context/LanguageContext';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Search, Send, Mail, FileText, Building, Globe, Clock } from 'lucide-react';
+import { Search, Send, Mail, FileText, Building, Globe, Clock, Trash2, Loader2, Paperclip, Download } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
+import { api } from '../../lib/api';
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'replied', 'closed'];
 
@@ -16,170 +14,251 @@ const statusBadge = (s) => {
     new: 'border-orange-500/40 text-orange-400 bg-orange-500/5',
     'in-progress': 'border-amber-500/40 text-amber-400 bg-amber-500/5',
     replied: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5',
-    closed: 'border-neutral-700 text-neutral-400 bg-neutral-800/30'
+    closed: 'border-neutral-700 text-neutral-400 bg-neutral-800/30',
   };
   return map[s] || map.new;
 };
 
+const fmtDate = (s) => {
+  try { return new Date(s).toLocaleString(); } catch { return s; }
+};
+
 const AdminQuotes = () => {
-  const { t } = useLang();
-  const [quotes, setQuotes] = useState(MOCK_QUOTES);
+  const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(null);
   const [reply, setReply] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  // Load locally submitted quotes too
-  React.useEffect(() => {
+  const refresh = async () => {
+    setLoading(true);
     try {
-      const local = JSON.parse(localStorage.getItem('mpt_quotes') || '[]');
-      if (local.length) {
-        const merged = [...local.map(l => ({
-          id: l.id, date: l.submittedAt, status: 'new',
-          customer: { name: l.name, company: l.company, email: l.email, country: l.country },
-          items: l.items || [], notes: l.message || '', total: null
-        })), ...MOCK_QUOTES];
-        setQuotes(merged);
-      }
-    } catch (e) {/* ignore */ }
-  }, []);
-
-  const filtered = quotes.filter(q => {
-    if (filter !== 'all' && q.status !== filter) return false;
-    if (search) {
-      const s = search.toLowerCase();
-      return q.id.toLowerCase().includes(s) || q.customer.name.toLowerCase().includes(s) || q.customer.email.toLowerCase().includes(s) || q.customer.company.toLowerCase().includes(s);
+      const res = await api.adminListQuotes();
+      setQuotes(res.quotes || []);
+    } catch (e) {
+      toast({ title: 'Failed to load quotes', description: e.message });
+    } finally {
+      setLoading(false);
     }
-    return true;
-  });
+  };
+  useEffect(() => { refresh(); }, []);
 
-  const updateStatus = (id, status) => {
-    setQuotes(prev => prev.map(q => q.id === id ? { ...q, status } : q));
-    toast({ title: 'Status updated', description: `${id} → ${status}` });
+  const filtered = useMemo(() => quotes.filter((q) => {
+    if (filter !== 'all' && q.status !== filter) return false;
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (q.qid || '').toLowerCase().includes(s) ||
+      `${q.firstName || ''} ${q.lastName || ''}`.toLowerCase().includes(s) ||
+      (q.email || '').toLowerCase().includes(s) ||
+      (q.company || '').toLowerCase().includes(s);
+  }), [quotes, filter, search]);
+
+  const open = (q) => {
+    setActive(q);
+    setReply('');
+    setAdminNotes(q.adminNotes || '');
   };
 
-  const sendReply = () => {
-    if (!reply.trim() || !active) return;
-    // MOCK: in production this will POST /api/quotes/:id/reply
-    updateStatus(active.id, 'replied');
-    toast({ title: 'Reply sent', description: `Email queued to ${active.customer.email}` });
-    setReply('');
-    setActive(null);
+  const updateStatus = async (qid, status) => {
+    try {
+      await api.adminUpdateQuote(qid, { status });
+      toast({ title: 'Status updated', description: `${qid} → ${status}` });
+      refresh();
+      if (active && active.qid === qid) setActive({ ...active, status });
+    } catch (e) { toast({ title: 'Update failed', description: e.message }); }
+  };
+
+  const saveNotes = async () => {
+    if (!active) return;
+    setBusy(true);
+    try {
+      await api.adminUpdateQuote(active.qid, { adminNotes });
+      toast({ title: 'Notes saved' });
+      refresh();
+    } catch (e) { toast({ title: 'Save failed', description: e.message }); }
+    finally { setBusy(false); }
+  };
+
+  const sendReply = async () => {
+    if (!active || !reply.trim()) return;
+    setBusy(true);
+    try {
+      const res = await api.adminReplyQuote(active.qid, { message: reply });
+      toast({ title: 'Reply sent', description: `Mode: ${res.mode}` });
+      setReply('');
+      refresh();
+      const updated = (await api.adminListQuotes()).quotes.find(q => q.qid === active.qid);
+      if (updated) setActive(updated);
+    } catch (e) { toast({ title: 'Reply failed', description: e.message }); }
+    finally { setBusy(false); }
+  };
+
+  const remove = async (q) => {
+    if (!window.confirm(`Delete quote ${q.qid}?`)) return;
+    try {
+      await api.adminDeleteQuote(q.qid);
+      toast({ title: 'Quote deleted' });
+      if (active && active.qid === q.qid) setActive(null);
+      refresh();
+    } catch (e) { toast({ title: 'Delete failed', description: e.message }); }
+  };
+
+  const downloadAttachment = (att) => {
+    if (!att?.data) return;
+    const a = document.createElement('a');
+    a.href = att.data;
+    a.download = att.name || 'attachment';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8" data-testid="admin-quotes">
       <Helmet><title>Quotes — Owner Panel</title></Helmet>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-white font-black text-2xl sm:text-3xl tracking-tight">{t('admin.quotes')}</h1>
-          <p className="text-neutral-500 text-sm mt-1">Review, reply and manage all incoming RFQs.</p>
+          <h1 className="text-white font-black text-2xl sm:text-3xl tracking-tight">Quotes</h1>
+          <p className="text-neutral-500 text-sm mt-1">RFQs submitted on the website.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="pl-9 bg-neutral-950 border-neutral-800 text-white h-9 w-64 focus-visible:ring-orange-500" />
+          </div>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className="bg-neutral-950 border border-neutral-800 text-white h-9 px-3 text-sm">
+            <option value="all">All</option>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {['all', ...STATUS_OPTIONS].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1.5 text-xs uppercase tracking-widest border ${filter === s ? 'border-orange-500 text-orange-500' : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
-            {s} {s !== 'all' && <span className="ml-1 opacity-60">{quotes.filter(q => q.status === s).length}</span>}
-          </button>
-        ))}
-        <div className="relative ml-auto">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="pl-9 bg-neutral-950 border-neutral-800 text-white h-9 w-64 focus-visible:ring-orange-500" />
-        </div>
-      </div>
-
-      <div className="border border-neutral-800 bg-neutral-950 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-neutral-900 text-[10px] uppercase tracking-widest text-neutral-500">
-              <tr>
-                <th className="text-left px-4 py-3">ID</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Items</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Date</th>
-                <th className="text-right px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-900">
-              {filtered.map(q => (
-                <tr key={q.id} className="hover:bg-neutral-900/40 transition-colors">
-                  <td className="px-4 py-3 text-orange-500 font-mono text-xs">{q.id}</td>
-                  <td className="px-4 py-3">
-                    <div className="text-white">{q.customer.name}</div>
-                    <div className="text-xs text-neutral-500">{q.customer.company}</div>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-300">{q.items?.length || 0}</td>
-                  <td className="px-4 py-3">
-                    <select value={q.status} onChange={(e) => updateStatus(q.id, e.target.value)} className={`bg-transparent border px-2 py-1 text-[10px] uppercase tracking-widest ${statusBadge(q.status)} cursor-pointer outline-none`}>
-                      {STATUS_OPTIONS.map(s => <option key={s} value={s} className="bg-neutral-950 text-white">{s}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-400 text-xs">{new Date(q.date).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" onClick={() => setActive(q)} className="bg-orange-500 hover:bg-orange-400 rounded-none h-8 text-xs">Open</Button>
-                  </td>
+      {loading ? (
+        <div className="text-neutral-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 border border-neutral-900 bg-neutral-950 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-900 text-[10px] uppercase tracking-widest text-neutral-500">
+                <tr>
+                  <th className="text-left p-3">QID</th>
+                  <th className="text-left p-3">Customer</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Created</th>
+                  <th className="text-right p-3"></th>
                 </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan="6" className="text-center py-10 text-neutral-500">No quotes match the current filter.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-neutral-500">No quotes match.</td></tr>}
+                {filtered.map((q) => (
+                  <tr key={q.qid} className={`border-t border-neutral-900 cursor-pointer ${active?.qid === q.qid ? 'bg-neutral-900/60' : 'hover:bg-neutral-900/30'}`} onClick={() => open(q)} data-testid={`admin-quote-row-${q.qid}`}>
+                    <td className="p-3 text-orange-400 font-mono text-xs">{q.qid}</td>
+                    <td className="p-3 text-white">
+                      <div>{q.firstName} {q.lastName}</div>
+                      <div className="text-xs text-neutral-500">{q.company}</div>
+                    </td>
+                    <td className="p-3"><span className={`text-[10px] uppercase tracking-widest border px-1.5 py-0.5 ${statusBadge(q.status)}`}>{q.status}</span></td>
+                    <td className="p-3 text-xs text-neutral-500">{fmtDate(q.createdAt)}</td>
+                    <td className="p-3 text-right">
+                      {(q.attachments || []).length > 0 && (
+                        <span className="inline-flex items-center text-[10px] text-orange-400 mr-2"><Paperclip className="w-3 h-3 mr-0.5" />{q.attachments.length}</span>
+                      )}
+                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); remove(q); }} className="rounded-none bg-transparent border-neutral-800 text-neutral-400 hover:border-red-500 hover:text-red-500" data-testid={`admin-quote-delete-${q.qid}`}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Quote detail dialog */}
-      <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
-        <DialogContent className="max-w-2xl bg-neutral-950 border-neutral-800 text-white p-0 max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="p-5 border-b border-neutral-800">
-            <DialogTitle className="flex items-center gap-2"><FileText className="w-5 h-5 text-orange-500" /> {active?.id}</DialogTitle>
-          </DialogHeader>
-          {active && (
-            <div className="overflow-y-auto p-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div><div className="text-neutral-500 text-xs uppercase tracking-widest">Customer</div><div className="flex items-center gap-2 mt-1"><Building className="w-3.5 h-3.5 text-orange-500" /><span className="text-white">{active.customer.name}</span></div><div className="text-neutral-500 text-xs">{active.customer.company}</div></div>
-                <div><div className="text-neutral-500 text-xs uppercase tracking-widest">Contact</div><div className="flex items-center gap-2 mt-1"><Mail className="w-3.5 h-3.5 text-orange-500" /><a className="text-white hover:text-orange-500" href={`mailto:${active.customer.email}`}>{active.customer.email}</a></div></div>
-                <div><div className="text-neutral-500 text-xs uppercase tracking-widest">Country</div><div className="flex items-center gap-2 mt-1"><Globe className="w-3.5 h-3.5 text-orange-500" /><span className="text-white">{active.customer.country || '—'}</span></div></div>
-                <div><div className="text-neutral-500 text-xs uppercase tracking-widest">Submitted</div><div className="flex items-center gap-2 mt-1"><Clock className="w-3.5 h-3.5 text-orange-500" /><span className="text-white">{new Date(active.date).toLocaleString()}</span></div></div>
-              </div>
-
-              <div>
-                <div className="text-neutral-500 text-xs uppercase tracking-widest mb-2">Items ({active.items?.length || 0})</div>
-                {active.items && active.items.length > 0 ? (
-                  <ul className="divide-y divide-neutral-800 border border-neutral-800">
-                    {active.items.map((it, i) => (
-                      <li key={i} className="p-3 flex items-center justify-between text-sm">
-                        <div>
-                          <div className="text-white">{it.name || it.nameKey || `Item ${i+1}`}</div>
-                          {it.notes && <div className="text-xs text-neutral-500">{it.notes}</div>}
-                        </div>
-                        <div className="text-neutral-400">Qty: {it.qty}</div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : <div className="text-neutral-500 text-sm">No basket items — custom RFQ.</div>}
-              </div>
-
-              {active.notes && (
-                <div>
-                  <div className="text-neutral-500 text-xs uppercase tracking-widest mb-2">Notes</div>
-                  <div className="text-sm text-neutral-300 border border-neutral-800 p-3 bg-neutral-900/40">{active.notes}</div>
+          {/* Detail pane */}
+          <div className="lg:col-span-2 border border-neutral-900 bg-neutral-950 p-5">
+            {!active ? (
+              <div className="text-center text-neutral-500 py-12">Select a quote to view details.</div>
+            ) : (
+              <div data-testid="admin-quote-detail">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-orange-400 font-mono text-xs">{active.qid}</div>
+                    <div className="text-white font-bold">{active.firstName} {active.lastName}</div>
+                    <div className="text-xs text-neutral-500">{active.company} · {active.country || '—'}</div>
+                  </div>
+                  <select value={active.status} onChange={(e) => updateStatus(active.qid, e.target.value)} className="bg-neutral-900 border border-neutral-800 text-white h-8 px-2 text-xs">
+                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
-              )}
+                <div className="text-xs text-neutral-400 space-y-1 mb-3">
+                  <div><Mail className="w-3 h-3 inline mr-1" /><a href={`mailto:${active.email}`} className="hover:text-orange-400">{active.email}</a></div>
+                  {active.phone && <div>📞 {active.phone}</div>}
+                  {active.industry && <div><Building className="w-3 h-3 inline mr-1" />{active.industry}</div>}
+                  <div><Clock className="w-3 h-3 inline mr-1" />{fmtDate(active.createdAt)}</div>
+                </div>
 
-              <div>
-                <div className="text-neutral-500 text-xs uppercase tracking-widest mb-2">Reply to customer</div>
-                <Textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your reply... (will be emailed to the customer)" className="bg-neutral-900 border-neutral-800 text-white min-h-[120px] focus-visible:ring-orange-500" />
-                <Button onClick={sendReply} disabled={!reply.trim()} className="mt-3 bg-orange-500 hover:bg-orange-400 rounded-none disabled:opacity-50">
-                  <Send className="w-4 h-4 mr-2" /> Send Reply
-                </Button>
-                <p className="text-[11px] text-neutral-500 mt-2">MOCKED: email will be sent via backend (configured under Settings).</p>
+                {(active.items || []).length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Items</div>
+                    <div className="space-y-1 text-sm text-neutral-300">
+                      {active.items.map((it, i) => (
+                        <div key={i} className="border border-neutral-900 px-2 py-1 flex justify-between"><span>{it.name || it.slug}</span><span className="text-neutral-500">× {it.qty}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {active.message && (
+                  <div className="mb-3">
+                    <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Customer message</div>
+                    <div className="text-sm text-neutral-300 border border-neutral-900 p-2 whitespace-pre-wrap">{active.message}</div>
+                  </div>
+                )}
+                {(active.attachments || []).length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1 flex items-center gap-1"><Paperclip className="w-3 h-3" /> Attachments</div>
+                    <div className="space-y-1">
+                      {active.attachments.map((a, i) => (
+                        <button key={i} onClick={() => downloadAttachment(a)} data-testid={`admin-quote-att-${i}`} className="w-full text-left text-sm text-neutral-300 border border-neutral-800 hover:border-orange-500 hover:text-orange-400 p-2 flex items-center justify-between">
+                          <span className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-orange-500" /> {a.name}</span>
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="mb-3">
+                  <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Internal notes</div>
+                  <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} className="bg-neutral-900 border-neutral-800 min-h-[60px]" />
+                  <Button size="sm" onClick={saveNotes} disabled={busy} className="bg-neutral-800 hover:bg-neutral-700 rounded-none mt-1 text-xs h-7">Save notes</Button>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Reply by email</div>
+                  <Textarea data-testid="admin-quote-reply-text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your reply…" className="bg-neutral-900 border-neutral-800 min-h-[100px]" />
+                  <Button onClick={sendReply} disabled={busy || !reply.trim()} className="bg-orange-500 hover:bg-orange-400 rounded-none w-full mt-2" data-testid="admin-quote-reply-send">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Send reply</>}
+                  </Button>
+                </div>
+                {(active.replies || []).length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Past replies ({active.replies.length})</div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {active.replies.map((r, i) => (
+                        <div key={i} className="border border-neutral-900 p-2 text-xs text-neutral-300">
+                          <div className="text-neutral-500">{fmtDate(r.at)} · {r.by} · {r.mode}</div>
+                          <div className="font-bold mt-1">{r.subject}</div>
+                          <div className="text-neutral-400 whitespace-pre-wrap mt-1">{r.message}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

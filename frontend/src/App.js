@@ -30,6 +30,10 @@ import AdminProducts from './pages/admin/Products';
 import AdminCustomers from './pages/admin/Customers';
 import AdminSettings from './pages/admin/Settings';
 import AiStudio from './pages/admin/AiStudio';
+import AdminCategories from './pages/admin/Categories';
+import AdminTeam from './pages/admin/Team';
+import AdminEmailTemplates from './pages/admin/EmailTemplates';
+import AdminEmailBlast from './pages/admin/EmailBlast';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -85,6 +89,10 @@ const AnimatedRoutes = () => {
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="ai" element={<AiStudio />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="team" element={<AdminTeam />} />
+          <Route path="templates" element={<AdminEmailTemplates />} />
+          <Route path="blast" element={<AdminEmailBlast />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

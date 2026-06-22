@@ -51,7 +51,7 @@ from email_service import (
     email_configured, get_notify_email, send_test_email,
 )
 from translate_service import translate_fields, llm_configured
-from ai_assistant import run_assistant, execute_undo
+from ai_assistant import run_assistant, execute_undo, extract_attachment_text
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -870,12 +870,21 @@ async def admin_delete_email_template(tid: str, auth=Depends(require_perm("templ
 # ============================================================
 # AI Assistant (Masterpiece Studio AI) — conversations + memory + undo
 # ============================================================
+class AiAttachment(BaseModel):
+    name: str
+    type: Optional[str] = ""
+    size: int = 0
+    data: str = ""  # data: URL or raw base64
+
+
 class AiSendMessage(BaseModel):
     message: str = Field(min_length=1, max_length=8000)
+    attachments: List[AiAttachment] = []
 
 
 class AiEditMessage(BaseModel):
     message: str = Field(min_length=1, max_length=8000)
+    attachments: List[AiAttachment] = []
 
 
 class AiConversationRename(BaseModel):
@@ -1010,7 +1019,7 @@ async def ai_delete_conversation(cid: str, auth=Depends(require_user)):
     return {"ok": True}
 
 
-async def _ai_send(*, conversation_id: str, auth: dict, message: str, drop_after_index: Optional[int] = None) -> dict:
+async def _ai_send(*, conversation_id: str, auth: dict, message: str, attachments: Optional[List[AiAttachment]] = None, drop_after_index: Optional[int] = None) -> dict:
     """Append user message, run the AI, append assistant response, persist + log actions."""
     from bson import ObjectId
     try:
@@ -1025,7 +1034,23 @@ async def _ai_send(*, conversation_id: str, auth: dict, message: str, drop_after
     if drop_after_index is not None:
         msgs = msgs[: drop_after_index]
 
-    user_msg = {"id": new_uuid(), "role": "user", "content": message, "at": now_iso()}
+    # Extract attachment text for the AI + sanitize (no raw base64 stored in message context)
+    enriched_atts = []
+    stored_atts = []
+    for att in (attachments or []):
+        text = extract_attachment_text(att.name, att.type, att.data)
+        enriched_atts.append({
+            "name": att.name, "type": att.type, "size": att.size, "text": text,
+        })
+        stored_atts.append({
+            "name": att.name, "type": att.type, "size": att.size,
+            "hasText": bool(text), "preview": (text or "")[:240],
+        })
+
+    user_msg = {
+        "id": new_uuid(), "role": "user", "content": message,
+        "attachments": stored_atts, "at": now_iso(),
+    }
     msgs.append(user_msg)
 
     caller = await _ai_caller(auth)
@@ -1045,6 +1070,7 @@ async def _ai_send(*, conversation_id: str, auth: dict, message: str, drop_after
         role=caller["role"],
         site_summary=site_summary,
         session_id=f"mpt-ai-{conversation_id}",
+        attachments=enriched_atts,
     )
 
     # Persist any actions to a separate audit collection so we can undo them later.
@@ -1101,13 +1127,12 @@ async def _ai_send(*, conversation_id: str, auth: dict, message: str, drop_after
 
 @api.post("/admin/ai/conversations/{cid}/messages")
 async def ai_send_message(cid: str, body: AiSendMessage, auth=Depends(require_user)):
-    return await _ai_send(conversation_id=cid, auth=auth, message=body.message)
+    return await _ai_send(conversation_id=cid, auth=auth, message=body.message, attachments=body.attachments)
 
 
 @api.patch("/admin/ai/conversations/{cid}/messages/{message_id}")
 async def ai_edit_message(cid: str, message_id: str, body: AiEditMessage, auth=Depends(require_user)):
-    """Edit a previous USER message and re-run the AI from that point.
-    Everything after the edited message is dropped and regenerated."""
+    """Edit a previous USER message and re-run the AI from that point."""
     from bson import ObjectId
     try:
         oid = ObjectId(cid)
@@ -1120,8 +1145,7 @@ async def ai_edit_message(cid: str, message_id: str, body: AiEditMessage, auth=D
     idx = next((i for i, m in enumerate(msgs) if m.get("id") == message_id and m.get("role") == "user"), None)
     if idx is None:
         raise HTTPException(status_code=404, detail="User message not found")
-    # Drop everything from the edited message onward; the AI rerun will re-append both user + assistant.
-    return await _ai_send(conversation_id=cid, auth=auth, message=body.message, drop_after_index=idx)
+    return await _ai_send(conversation_id=cid, auth=auth, message=body.message, attachments=body.attachments, drop_after_index=idx)
 
 
 @api.post("/admin/ai/actions/{aid}/undo")
