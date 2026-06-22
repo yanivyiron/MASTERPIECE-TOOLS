@@ -29,6 +29,7 @@ import AdminQuotes from './pages/admin/Quotes';
 import AdminProducts from './pages/admin/Products';
 import AdminCustomers from './pages/admin/Customers';
 import AdminSettings from './pages/admin/Settings';
+import AiStudio from './pages/admin/AiStudio';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -83,6 +84,7 @@ const AnimatedRoutes = () => {
           <Route path="products" element={<AdminProducts />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="ai" element={<AiStudio />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

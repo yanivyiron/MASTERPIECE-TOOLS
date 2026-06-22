@@ -50,7 +50,7 @@ async def get_notify_email() -> str:
     return cfg["notify_email"]
 
 
-def _do_send(cfg: dict, to: str, subject: str, html: str, text: Optional[str], reply_to: Optional[str], cc: Optional[List[str]]) -> dict:
+def _do_send(cfg: dict, to: str, subject: str, html: str, text: Optional[str], reply_to: Optional[str], cc: Optional[List[str]], attachments: Optional[List[dict]] = None) -> dict:
     msg = EmailMessage()
     msg["From"] = f"{cfg['from_name']} <{cfg['from_email']}>"
     msg["To"] = to
@@ -61,8 +61,29 @@ def _do_send(cfg: dict, to: str, subject: str, html: str, text: Optional[str], r
     msg["Subject"] = subject
     msg.set_content(text or "Please view this email in HTML.")
     msg.add_alternative(html, subtype="html")
+    # Attach files (data URLs or raw base64)
+    if attachments:
+        import base64
+        for att in attachments:
+            try:
+                raw = att.get("data") or ""
+                mime = att.get("type") or "application/octet-stream"
+                name = att.get("name") or "attachment"
+                if raw.startswith("data:"):
+                    head, payload = raw.split(",", 1)
+                    if not mime or mime == "application/octet-stream":
+                        mime_part = head[5:].split(";")[0]
+                        if mime_part:
+                            mime = mime_part
+                else:
+                    payload = raw
+                file_bytes = base64.b64decode(payload)
+                maintype, _, subtype = mime.partition("/")
+                msg.add_attachment(file_bytes, maintype=maintype or "application", subtype=subtype or "octet-stream", filename=name)
+            except Exception as e:
+                logger.warning("Could not attach %s: %s", att.get("name"), e)
     try:
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=20) as s:
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=30) as s:
             s.ehlo()
             if cfg["use_tls"]:
                 s.starttls()
@@ -82,14 +103,15 @@ async def send_email(
     text: Optional[str] = None,
     reply_to: Optional[str] = None,
     cc: Optional[List[str]] = None,
+    attachments: Optional[List[dict]] = None,
 ) -> dict:
     """Send a single email. Returns {ok, mode, error?}. Falls back to mock when SMTP unset."""
     cfg = await _smtp_config()
     if not (cfg["host"] and cfg["user"] and cfg["password"]):
-        logger.info("[MOCK EMAIL] to=%s subject=%s reply_to=%s", to, subject, reply_to)
+        logger.info("[MOCK EMAIL] to=%s subject=%s reply_to=%s attachments=%s", to, subject, reply_to, len(attachments or []))
         logger.info("[MOCK EMAIL BODY]\n%s", text or html)
         return {"ok": True, "mode": "mock"}
-    return _do_send(cfg, to, subject, html, text, reply_to, cc)
+    return _do_send(cfg, to, subject, html, text, reply_to, cc, attachments)
 
 
 async def send_test_email(to: str) -> dict:
@@ -104,7 +126,7 @@ async def send_test_email(to: str) -> dict:
         f"<p style='color:#666;font-size:12px'>Sent via {cfg['host']}:{cfg['port']} as {cfg['user']}</p>"
         "</div>"
     )
-    return _do_send(cfg, to=to, subject="Masterpiece Tools — SMTP test", html=html, text="SMTP works.", reply_to=None, cc=None)
+    return _do_send(cfg, to=to, subject="Masterpiece Tools — SMTP test", html=html, text="SMTP works.", reply_to=None, cc=None, attachments=None)
 
 
 # ---------- HTML templates ----------

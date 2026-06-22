@@ -94,15 +94,53 @@
 │       └── pages/admin/{Settings,Products,Quotes,Customers}.jsx
 ```
 
-## Backlog (P2)
-- Migrate Admin Products UI to call backend `/api/admin/products` (currently localStorage)
-- Migrate Admin Settings UI to also persist to `/api/admin/settings` (currently localStorage only)
-- Customer-self-service quote tracking
-- Stripe checkout for ready-stock items
-- File upload to S3 / object storage (currently base64 in JSON)
-- Audit log table + admin actions history
-- E2E Playwright suite
+## Phase 3 — Massive Admin Expansion (✅ COMPLETE — Feb 2026)
 
-## Test status (Iteration 4)
-- Backend pytest: **20/20 PASS** (`/app/backend/tests/backend_test.py`)
-- Frontend e2e: **100% on requested flows** (RFQ, country combobox, i18n NL/PT)
+### Backend
+- **Multi-user RBAC**: owner + admin + member roles with per-resource granular permissions (`quotes.edit`, `products.delete`, `settings.edit`, etc.)
+- **Team management**: `/api/admin/team` CRUD; invited members get a welcome email; password-change endpoint works for owner + team.
+- **Categories**: full CRUD with auto-translation; public `/api/categories` for the website.
+- **Quote attachments**: customers can attach files on RFQ; forwarded to owner email; persisted on the quote.
+- **Quote delete + customer delete**: full CRUD on operational data.
+- **Customer overrides**: notes / tags / blocked flag per customer.
+- **Bulk email blast**: `/api/admin/email/blast` with optional templates + base64 attachments + history audit.
+- **Email templates**: CRUD store, reusable from the blast UI.
+- **SMTP presets**: 9 presets including GoDaddy (Pro + legacy Workspace).
+- **Auto-translation**: products and categories auto-translate to NL/DE/FR/PT on create/update via Emergent LLM (Claude Sonnet 4.5 in `translate_service.py`).
+
+### AI Studio (NEW — Phase 4)
+- **Masterpiece Studio AI** — embedded panel-only assistant at `/admin/ai`, owner + team only.
+- Powered by Claude Sonnet 4.5 via Emergent Universal LLM Key.
+- **Knows caller name, role and exact permissions**, refuses tasks they can't perform.
+- **Tools** (all permission-checked):
+  - Read: get_settings, list_products, list_categories, list_quotes, list_documents, search_web, fetch_url.
+  - Write: update_settings, create/update/delete product, retranslate_product, create/update/delete category, update_quote, reply_to_quote, send_email, create/delete document.
+- **Conversations / memory**: persistent threads (`db.ai_conversations`) per user.
+- **Edit-and-rerun**: edit any past USER message; the AI replays from there.
+- **Undo per action**: every mutating tool stores an `_undo` recipe; one-click revert from the action card; supports settings, products (incl. delete via snapshot restore), categories, quotes, documents.
+- **Audit log**: every action persisted to `db.ai_actions`.
+- **Web fetch & search**: AI can `fetch_url` (read clean text from any page) and `search_web` (DuckDuckGo top 5).
+- **Document generation**: AI can write Markdown/HTML/text documents stored in `db.documents` and downloadable from the panel.
+- General Q&A also supported (planning, drafting, math, translation, etc.).
+
+### Frontend
+- **AI Studio page** (`/admin/ai`): two-pane layout, threads sidebar, real-time-feeling chat with typing indicator, suggestion chips, edit-and-resend (hover any user bubble), tool-action cards with Undo button, owner-only badge + Universal Key reminder.
+- **Basket auto-clears after a successful quote submission** (Feb 2026 fix).
+
+### Architecture additions
+```
+/app/backend/
+├── ai_assistant.py    Studio AI runtime + tool registry + undo executor
+├── translate_service.py  Auto-translation via Emergent LLM
+/app/frontend/src/pages/admin/
+├── AiStudio.jsx       Full conversational chat UI for the panel AI
+```
+
+## Phase 5 — Remaining (P1)
+- Wix-like visual CMS editor on the public site (live in-page text editing, drag-and-drop sections).
+- Email template builder UI page (backend already supports CRUD).
+- Bulk-email blast UI (backend already supports `/api/admin/email/blast`).
+- Team management UI page (backend already supports `/api/admin/team`).
+- Categories CRUD UI page (backend already supports `/api/admin/categories`).
+- Quote attachments UI in admin (backend already stores them).
+- Refactor `server.py` → `/app/backend/routes/`.

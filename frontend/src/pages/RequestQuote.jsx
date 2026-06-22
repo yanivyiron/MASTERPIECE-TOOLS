@@ -67,6 +67,8 @@ const RequestQuote = () => {
 
     setSubmitting(false);
     setSuccess(true);
+    // Wipe the basket immediately so the same items aren't re-submitted on the next quote.
+    try { clear(); } catch (e) { /* ignore */ }
     toast({ title: t('quote.success'), description: qid ? `${qid} — ${form.email}` : form.email });
   };
 

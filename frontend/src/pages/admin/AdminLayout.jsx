@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, FileText, Package, Users, Settings, LogOut, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, FileText, Package, Users, Settings, LogOut, ExternalLink, Sparkles } from 'lucide-react';
 import Logo from '../../components/Logo';
 import { useLang } from '../../context/LanguageContext';
 
@@ -24,6 +24,10 @@ const AdminLayout = () => {
         </div>
         <nav className="flex-1 py-4">
           <NavLink to="/admin" end className={link}><LayoutDashboard className="w-4 h-4" /> {t('admin.dashboard')}</NavLink>
+          <NavLink to="/admin/ai" className={link} data-testid="admin-nav-ai">
+            <Sparkles className="w-4 h-4" /> AI Studio
+            <span className="ml-auto text-[9px] tracking-widest text-orange-500 border border-orange-500/40 px-1.5 py-0.5">NEW</span>
+          </NavLink>
           <NavLink to="/admin/quotes" className={link}><FileText className="w-4 h-4" /> {t('admin.quotes')}</NavLink>
           <NavLink to="/admin/products" className={link}><Package className="w-4 h-4" /> {t('admin.products')}</NavLink>
           <NavLink to="/admin/customers" className={link}><Users className="w-4 h-4" /> {t('admin.customers')}</NavLink>

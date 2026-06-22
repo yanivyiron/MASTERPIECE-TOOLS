@@ -44,6 +44,7 @@ export const api = {
   // Public
   health: () => request('GET', '/health'),
   getSettings: () => request('GET', '/settings'),
+  getCategories: () => request('GET', '/categories'),
   submitQuote: (payload) => request('POST', '/quotes', { body: payload }),
 
   // Admin auth
@@ -56,20 +57,59 @@ export const api = {
   // Admin quotes
   adminListQuotes: () => request('GET', '/admin/quotes', { auth: true }),
   adminUpdateQuote: (qid, patch) => request('PATCH', `/admin/quotes/${qid}`, { body: patch, auth: true }),
+  adminDeleteQuote: (qid) => request('DELETE', `/admin/quotes/${qid}`, { auth: true }),
   adminReplyQuote: (qid, payload) => request('POST', `/admin/quotes/${qid}/reply`, { body: payload, auth: true }),
 
   // Admin customers
   adminListCustomers: () => request('GET', '/admin/customers', { auth: true }),
+  adminUpdateCustomer: (email, patch) => request('PUT', `/admin/customers/${encodeURIComponent(email)}`, { body: patch, auth: true }),
+  adminDeleteCustomer: (email) => request('DELETE', `/admin/customers/${encodeURIComponent(email)}`, { auth: true }),
+  adminEmailCustomer: (email, payload) => request('POST', `/admin/customers/${encodeURIComponent(email)}/email`, { body: payload, auth: true }),
 
-  // Admin settings
+  // Admin settings + email
   adminPutSettings: (data) => request('PUT', '/admin/settings', { body: { data }, auth: true }),
   adminEmailTest: (to) => request('POST', '/admin/email/test', { body: { to }, auth: true }),
+  adminEmailBlast: (payload) => request('POST', '/admin/email/blast', { body: payload, auth: true }),
+  adminEmailHistory: () => request('GET', '/admin/email/history', { auth: true }),
 
   // Admin products
   adminListProducts: () => request('GET', '/admin/products', { auth: true }),
   adminCreateProduct: (product) => request('POST', '/admin/products', { body: product, auth: true }),
   adminUpdateProduct: (pid, product) => request('PUT', `/admin/products/${pid}`, { body: product, auth: true }),
   adminDeleteProduct: (pid) => request('DELETE', `/admin/products/${pid}`, { auth: true }),
+  adminRetranslateProduct: (pid) => request('POST', `/admin/products/${pid}/translate`, { body: {}, auth: true }),
+
+  // Admin categories
+  adminListCategories: () => request('GET', '/admin/categories', { auth: true }),
+  adminCreateCategory: (cat) => request('POST', '/admin/categories', { body: cat, auth: true }),
+  adminUpdateCategory: (cid, cat) => request('PUT', `/admin/categories/${cid}`, { body: cat, auth: true }),
+  adminDeleteCategory: (cid) => request('DELETE', `/admin/categories/${cid}`, { auth: true }),
+
+  // Admin team / RBAC
+  adminListTeam: () => request('GET', '/admin/team', { auth: true }),
+  adminCreateTeam: (member) => request('POST', '/admin/team', { body: member, auth: true }),
+  adminUpdateTeam: (mid, patch) => request('PATCH', `/admin/team/${mid}`, { body: patch, auth: true }),
+  adminDeleteTeam: (mid) => request('DELETE', `/admin/team/${mid}`, { auth: true }),
+
+  // Email templates
+  adminListTemplates: () => request('GET', '/admin/email/templates', { auth: true }),
+  adminCreateTemplate: (tpl) => request('POST', '/admin/email/templates', { body: tpl, auth: true }),
+  adminUpdateTemplate: (tid, tpl) => request('PUT', `/admin/email/templates/${tid}`, { body: tpl, auth: true }),
+  adminDeleteTemplate: (tid) => request('DELETE', `/admin/email/templates/${tid}`, { auth: true }),
+
+  // AI assistant — conversations + actions
+  aiChat: (payload) => request('POST', '/admin/ai/chat', { body: payload, auth: true }),
+  aiListConversations: () => request('GET', '/admin/ai/conversations', { auth: true }),
+  aiCreateConversation: () => request('POST', '/admin/ai/conversations', { body: {}, auth: true }),
+  aiGetConversation: (cid) => request('GET', `/admin/ai/conversations/${cid}`, { auth: true }),
+  aiRenameConversation: (cid, title) => request('PATCH', `/admin/ai/conversations/${cid}`, { body: { title }, auth: true }),
+  aiDeleteConversation: (cid) => request('DELETE', `/admin/ai/conversations/${cid}`, { auth: true }),
+  aiSendMessage: (cid, payload) => request('POST', `/admin/ai/conversations/${cid}/messages`, { body: payload, auth: true }),
+  aiEditMessage: (cid, mid, payload) => request('PATCH', `/admin/ai/conversations/${cid}/messages/${mid}`, { body: payload, auth: true }),
+  aiUndoAction: (aid) => request('POST', `/admin/ai/actions/${aid}/undo`, { body: {}, auth: true }),
+  aiListDocuments: () => request('GET', '/admin/ai/documents', { auth: true }),
+  aiGetDocument: (did) => request('GET', `/admin/ai/documents/${did}`, { auth: true }),
+  aiDeleteDocument: (did) => request('DELETE', `/admin/ai/documents/${did}`, { auth: true }),
 };
 
 export default api;
