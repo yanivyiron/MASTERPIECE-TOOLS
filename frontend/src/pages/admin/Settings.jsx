@@ -1,139 +1,184 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
-import { Mail, ShieldCheck, Save, Bell, Globe, Building2 } from 'lucide-react';
+import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
+import { useSiteConfig, SITE_CONFIG_DEFAULTS } from '../../context/SiteConfigContext';
 
-const KEY = 'mpt_admin_settings';
-const defaults = {
-  emailProvider: 'smtp',
-  smtpHost: 'smtp.gmail.com',
-  smtpPort: '587',
-  smtpUser: '',
-  smtpPassword: '',
-  notifyEmail: 'yaniv@masterpiece-innovations.com',
-  fromEmail: 'noreply@masterpiece-tools.com',
-  fromName: 'Masterpiece Innovations B.V.',
-  companyName: 'Masterpiece Innovations B.V.',
-  companyAddress: 'Van Heuven Goedhartlaan, 1181 LE Amstelveen, Netherlands',
-  companyPhone: '+31 6 25363610',
-  notifyOnNewQuote: true,
-  notifyOnReply: true,
-  defaultLanguage: 'en'
-};
+const Field = ({ label, children, className = '' }) => (
+  <div className={className}>
+    <Label className="text-neutral-400 text-[11px] uppercase tracking-widest">{label}</Label>
+    <div className="mt-2">{children}</div>
+  </div>
+);
+
+const Section = ({ icon: Icon, title, hint, children }) => (
+  <div className="border border-neutral-800 bg-neutral-950 p-6">
+    <div className="flex items-center gap-2 mb-1">
+      <Icon className="w-5 h-5 text-orange-500" />
+      <div className="text-white font-bold uppercase tracking-wide text-sm">{title}</div>
+    </div>
+    {hint && <p className="text-xs text-neutral-500 mb-5">{hint}</p>}
+    <div className={hint ? 'mt-5' : 'mt-5'}>{children}</div>
+  </div>
+);
 
 const AdminSettings = () => {
-  const [settings, setSettings] = useState(defaults);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setSettings({ ...defaults, ...JSON.parse(raw) });
-    } catch (e) {/* ignore */ }
-  }, []);
+  const { config, updateConfig, resetConfig } = useSiteConfig();
+  const update = (k) => (v) => updateConfig({ [k]: typeof v === 'object' && v?.target ? v.target.value : v });
 
-  const update = (k, v) => setSettings(prev => ({ ...prev, [k]: v }));
   const save = () => {
-    try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) {/* ignore */ }
-    toast({ title: 'Settings saved', description: 'Stored locally (will sync to backend later)' });
+    toast({ title: 'Settings saved', description: 'All site-wide changes are live across every page.' });
+  };
+  const reset = () => {
+    if (window.confirm('Reset all site settings to defaults?')) {
+      resetConfig();
+      toast({ title: 'Settings reset', description: 'Defaults restored.' });
+    }
   };
 
+  // Helper: derived value
+  const stdInput = 'bg-neutral-900 border-neutral-800 text-white focus-visible:ring-orange-500';
+
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-6 sm:p-8 max-w-5xl" data-testid="admin-settings">
       <Helmet><title>Settings — Owner Panel</title></Helmet>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-white font-black text-2xl sm:text-3xl tracking-tight">Settings</h1>
-          <p className="text-neutral-500 text-sm mt-1">Connect your email provider and notification preferences.</p>
+          <h1 className="text-white font-black text-2xl sm:text-3xl tracking-tight">Site Settings</h1>
+          <p className="text-neutral-500 text-sm mt-1">Edit content, contact details, social links, email, and defaults — visible site-wide.</p>
         </div>
-        <Button onClick={save} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10"><Save className="w-4 h-4 mr-2" /> Save</Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={reset} variant="outline" className="border-neutral-700 hover:border-orange-500 text-neutral-200 hover:text-orange-500 bg-transparent rounded-none h-10" data-testid="settings-reset-btn">
+            <RotateCcw className="w-4 h-4 mr-2" /> Reset
+          </Button>
+          <Button onClick={save} className="bg-orange-500 hover:bg-orange-400 rounded-none h-10" data-testid="settings-save-btn">
+            <Save className="w-4 h-4 mr-2" /> Save
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
-        <div className="border border-neutral-800 bg-neutral-950 p-6">
-          <div className="flex items-center gap-2 mb-5"><Building2 className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Company Information</div></div>
+        <Section icon={Building2} title="Company Information" hint="Shown in footer, header bar, and emails.">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2"><Label className="text-neutral-400 text-xs uppercase tracking-widest">Company Name</Label><Input value={settings.companyName} onChange={(e) => update('companyName', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-            <div className="md:col-span-2"><Label className="text-neutral-400 text-xs uppercase tracking-widest">Address</Label><Input value={settings.companyAddress} onChange={(e) => update('companyAddress', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-            <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Phone</Label><Input value={settings.companyPhone} onChange={(e) => update('companyPhone', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-            <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Public Email</Label><Input value={settings.notifyEmail} onChange={(e) => update('notifyEmail', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+            <Field label="Company Name" className="md:col-span-2">
+              <Input value={config.companyName} onChange={update('companyName')} className={stdInput} data-testid="settings-company-name" />
+            </Field>
+            <Field label="Tagline (used in SEO/About)" className="md:col-span-2">
+              <Input value={config.companyTagline} onChange={update('companyTagline')} className={stdInput} />
+            </Field>
+            <Field label="Address" className="md:col-span-2">
+              <Input value={config.companyAddress} onChange={update('companyAddress')} className={stdInput} data-testid="settings-address" />
+            </Field>
+            <Field label="Phone">
+              <Input value={config.contactPhone} onChange={update('contactPhone')} className={stdInput} data-testid="settings-phone" />
+            </Field>
+            <Field label="Public Contact Email">
+              <Input value={config.contactEmail} onChange={update('contactEmail')} className={stdInput} data-testid="settings-email" />
+            </Field>
+            <Field label="Default RFQ Response Time">
+              <Input value={config.rfqResponseTime} onChange={update('rfqResponseTime')} className={stdInput} placeholder="e.g. 24-48h" />
+            </Field>
+            <Field label="Certifications Tagline (header bar)">
+              <Input value={config.certifications} onChange={update('certifications')} className={stdInput} />
+            </Field>
           </div>
-        </div>
+        </Section>
 
-        <div className="border border-neutral-800 bg-neutral-950 p-6">
-          <div className="flex items-center gap-2 mb-5"><Mail className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Email Provider</div></div>
+        <Section icon={MessageCircle} title="WhatsApp Floating Button" hint="The chat bubble in the bottom-right corner of every page.">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <Field label="WhatsApp Number (with country code)">
+              <Input value={config.whatsappNumber} onChange={update('whatsappNumber')} className={stdInput} placeholder="+31 6 25363610" data-testid="settings-whatsapp-number" />
+            </Field>
+            <div className="flex items-center justify-between border border-neutral-800 bg-neutral-900 px-4 py-3">
+              <div>
+                <div className="text-white text-sm">Show WhatsApp Button</div>
+                <div className="text-xs text-neutral-500">Toggle visibility globally</div>
+              </div>
+              <Switch checked={config.whatsappEnabled} onCheckedChange={update('whatsappEnabled')} data-testid="settings-whatsapp-toggle" />
+            </div>
+          </div>
+        </Section>
+
+        <Section icon={Linkedin} title="Social & Web Links" hint="Used in header, footer, and structured data.">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-neutral-400 text-xs uppercase tracking-widest">Provider</Label>
-              <select value={settings.emailProvider} onChange={(e) => update('emailProvider', e.target.value)} className="mt-2 w-full bg-neutral-900 border border-neutral-800 text-white h-10 px-3">
+            <Field label="LinkedIn URL">
+              <Input value={config.linkedinUrl} onChange={update('linkedinUrl')} className={stdInput} data-testid="settings-linkedin" placeholder="https://www.linkedin.com/company/..." />
+            </Field>
+            <Field label="Website URL (canonical)">
+              <Input value={config.websiteUrl} onChange={update('websiteUrl')} className={stdInput} placeholder="https://www.masterpiece-tools.com" />
+            </Field>
+          </div>
+        </Section>
+
+        <Section icon={Mail} title="Email Provider (Phase 2)" hint="Stays mocked until the backend phase. Credentials will be encrypted server-side.">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Provider">
+              <select value={config.emailProvider} onChange={update('emailProvider')} className="w-full bg-neutral-900 border border-neutral-800 text-white h-10 px-3">
                 <option value="smtp">SMTP</option>
                 <option value="sendgrid">SendGrid</option>
                 <option value="resend">Resend</option>
                 <option value="mailgun">Mailgun</option>
               </select>
-            </div>
-            <div>
-              <Label className="text-neutral-400 text-xs uppercase tracking-widest">From Name</Label>
-              <Input value={settings.fromName} onChange={(e) => update('fromName', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" />
-            </div>
-            <div>
-              <Label className="text-neutral-400 text-xs uppercase tracking-widest">From Email</Label>
-              <Input value={settings.fromEmail} onChange={(e) => update('fromEmail', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" />
-            </div>
-            <div>
-              <Label className="text-neutral-400 text-xs uppercase tracking-widest">Owner Notification Email</Label>
-              <Input value={settings.notifyEmail} onChange={(e) => update('notifyEmail', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" />
-            </div>
+            </Field>
+            <Field label="From Name"><Input value={config.fromName} onChange={update('fromName')} className={stdInput} /></Field>
+            <Field label="From Email"><Input value={config.fromEmail} onChange={update('fromEmail')} className={stdInput} /></Field>
+            <Field label="Owner Notification Email">
+              <Input value={config.notifyEmail} onChange={update('notifyEmail')} className={stdInput} data-testid="settings-notify-email" />
+            </Field>
           </div>
 
-          {settings.emailProvider === 'smtp' && (
+          {config.emailProvider === 'smtp' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-5 border-t border-neutral-900">
-              <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">SMTP Host</Label><Input value={settings.smtpHost} onChange={(e) => update('smtpHost', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-              <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Port</Label><Input value={settings.smtpPort} onChange={(e) => update('smtpPort', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-              <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Username</Label><Input value={settings.smtpUser} onChange={(e) => update('smtpUser', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
-              <div><Label className="text-neutral-400 text-xs uppercase tracking-widest">Password / App Password</Label><Input type="password" value={settings.smtpPassword} onChange={(e) => update('smtpPassword', e.target.value)} className="mt-2 bg-neutral-900 border-neutral-800 text-white" /></div>
+              <Field label="SMTP Host"><Input value={config.smtpHost} onChange={update('smtpHost')} className={stdInput} /></Field>
+              <Field label="Port"><Input value={config.smtpPort} onChange={update('smtpPort')} className={stdInput} /></Field>
+              <Field label="Username"><Input value={config.smtpUser} onChange={update('smtpUser')} className={stdInput} /></Field>
+              <Field label="Password / App Password"><Input type="password" value={config.smtpPassword} onChange={update('smtpPassword')} className={stdInput} /></Field>
             </div>
           )}
-          <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500"><ShieldCheck className="w-4 h-4 text-emerald-500" /> Credentials are encrypted and stored server-side (backend pending).</div>
-        </div>
+          <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" /> Credentials will be encrypted server-side (backend pending).
+          </div>
+        </Section>
 
-        <div className="border border-neutral-800 bg-neutral-950 p-6">
-          <div className="flex items-center gap-2 mb-5"><Bell className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Notifications</div></div>
+        <Section icon={Bell} title="Notifications">
           <div className="space-y-4">
-            <label className="flex items-center justify-between">
+            <label className="flex items-center justify-between border border-neutral-800 bg-neutral-900 px-4 py-3">
               <div>
                 <div className="text-white text-sm">Email me on every new quote</div>
-                <div className="text-xs text-neutral-500">Sent to {settings.notifyEmail}</div>
+                <div className="text-xs text-neutral-500">Sent to {config.notifyEmail}</div>
               </div>
-              <Switch checked={settings.notifyOnNewQuote} onCheckedChange={(v) => update('notifyOnNewQuote', v)} />
+              <Switch checked={config.notifyOnNewQuote} onCheckedChange={update('notifyOnNewQuote')} />
             </label>
-            <label className="flex items-center justify-between">
+            <label className="flex items-center justify-between border border-neutral-800 bg-neutral-900 px-4 py-3">
               <div>
                 <div className="text-white text-sm">Notify on customer reply</div>
                 <div className="text-xs text-neutral-500">Threaded conversation updates</div>
               </div>
-              <Switch checked={settings.notifyOnReply} onCheckedChange={(v) => update('notifyOnReply', v)} />
+              <Switch checked={config.notifyOnReply} onCheckedChange={update('notifyOnReply')} />
             </label>
           </div>
-        </div>
+        </Section>
 
-        <div className="border border-neutral-800 bg-neutral-950 p-6">
-          <div className="flex items-center gap-2 mb-5"><Globe className="w-5 h-5 text-orange-500" /><div className="text-white font-bold uppercase tracking-wide text-sm">Website Defaults</div></div>
-          <div>
-            <Label className="text-neutral-400 text-xs uppercase tracking-widest">Default Language</Label>
-            <select value={settings.defaultLanguage} onChange={(e) => update('defaultLanguage', e.target.value)} className="mt-2 w-full max-w-xs bg-neutral-900 border border-neutral-800 text-white h-10 px-3">
+        <Section icon={Globe} title="Website Defaults">
+          <Field label="Default Language">
+            <select value={config.defaultLanguage} onChange={update('defaultLanguage')} className="w-full max-w-xs bg-neutral-900 border border-neutral-800 text-white h-10 px-3">
               <option value="en">English (default)</option>
               <option value="nl">Nederlands</option>
               <option value="de">Deutsch</option>
               <option value="fr">Français</option>
               <option value="pt">Português</option>
             </select>
-          </div>
-        </div>
+          </Field>
+        </Section>
 
-        <div className="text-xs text-neutral-500 italic">All settings are stored locally for now (MOCKED). Backend integration in Phase 2 will encrypt credentials and persist to database.</div>
+        <div className="text-xs text-neutral-500 italic flex items-center gap-2">
+          <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+          All settings are stored locally for now (MOCKED). Backend integration in Phase 2 will persist to database and encrypt credentials. Defaults loaded from <code className="text-neutral-400">SITE_CONFIG_DEFAULTS</code> ({Object.keys(SITE_CONFIG_DEFAULTS).length} fields).
+        </div>
       </div>
     </div>
   );

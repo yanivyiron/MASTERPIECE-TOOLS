@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only Phase 1 polish testing for Masterpiece Tools. Verified 9 user-facing flows: floating WhatsApp button, footer LinkedIn, multi-language header (EN/NL/DE/FR/PT), page transitions, PDF viewer modal on 4 different products, admin Site Settings CMS, CMS propagation (WA number, LinkedIn URL, WA toggle), and Add-to-Basket flow. 8/10 flows fully pass. 2 issues found: missing /request-quote route alias, and header LinkedIn appears as visual text but is NOT a real anchor link.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Header (top contact bar)",
+        "issue": "LinkedIn appears as visual text in the top contact bar but is NOT a real <a> anchor — querying header anchors returns only [logo, About, Cutting Tools, Gauges, Products]. No element with href containing 'linkedin' exists in the header. Requirement (d) says LinkedIn must be a clickable link in header + footer. Footer LinkedIn works correctly; header LinkedIn does not.",
+        "selector": "header a[href*='linkedin']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Routing — Request a Quote",
+        "issue": "Two URL variants in the spec: /request-quote (from review_request features list) renders a completely BLANK page (no header/footer/WhatsApp, body length ~2.3 KB only toast viewport). The actual working route is /request-a-quote which renders properly with header, footer, FloatingWhatsApp and the Request A Quotation form. Either add a redirect from /request-quote -> /request-a-quote, or update test contract. Current behavior breaks any backlinks or marketing URLs using the shorter path.",
+        "selector": "route /request-quote",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home (hero in NL)",
+        "issues": ["NL hero title 'Luchtvaartkwaliteit' visually clips on the right edge of the hero column at 1920w because the word is very long and overlaps into the hero image card. Header itself is fine, only the hero <h1>. Consider tighter type ramp or word-break for NL."]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Make the header LinkedIn into a real <a href={config.linkedinUrl} target='_blank'> with data-testid='header-linkedin' so it satisfies requirement (d) and matches the footer link.",
+    "Either add a Route alias for /request-quote -> /request-a-quote in App.js, or document that only /request-a-quote is valid and update any internal links/tests.",
+    "Optional: tighten the NL hero h1 sizing or allow word-break to prevent 'Luchtvaartkwaliteit' from clipping the hero image."
+  ],
+  "critical_code_review_comments": [
+    "Header.jsx top-bar LinkedIn label is rendered without an anchor — easy fix, wrap the icon+label in <a href={config.linkedinUrl} target='_blank' rel='noopener noreferrer' data-testid='header-linkedin'>.",
+    "App.js routes — /request-quote not defined; only /request-a-quote exists. Add <Route path='/request-quote' element={<Navigate to='/request-a-quote' replace />} /> to handle legacy URL.",
+    "SiteConfigContext defaults: linkedinUrl shown in admin Settings ('.../masterpiece-innovations-b-v/') does NOT include the original '?viewAsMember=true' query, yet Footer.jsx still renders the correct full URL — verify there is no hard-coded fallback in Footer that ignores config (this could mask future config changes). NOTE: propagation test confirmed footer DOES respect config when user explicitly edits, so this is just a default-value cosmetic mismatch."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (mocked, skipped per request)", "frontend": "82%"},
+  "test_credentials": "Admin auth bypass via localStorage.setItem('mpt_admin_session', JSON.stringify({email:'admin@masterpiece-tools.com', name:'Yaniv (Owner)', role:'owner', loginAt:new Date().toISOString()})). Works as expected.",
+  "seed_data_creation": "None — used existing mock data.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All PDFs (/specs/<slug>.pdf) return 200 with application/pdf for metric-size-plug, metric-size-ring, thread-plug, inch-size-plug. PdfViewerModal opens correctly with #toolbar=1&navpanes=0&statusbar=0&view=FitH params, closes on ESC. CMS propagation chain works: SiteConfigContext + localStorage 'mpt_site_config' -> FloatingWhatsApp (wa.me URL changes) + Footer LinkedIn href. WhatsApp toggle off removes the floating button from the DOM (count=0). Add-to-basket toast + drawer integration works. Language switcher via localStorage key 'mpt_lang' (plain string value). Five nav labels verified: EN: About/Cutting Tools/Gauges/Products; NL: Over Ons/Snijgereedschap/Kalibers/Producten; DE: Über Uns/Zerspanung/Lehren/Produkte; FR: À Propos/Outils/Calibres/Produits; PT: Sobre Nós/Ferramentas/Calibres/Produtos — no overlap at 1920px. CTA fits in all languages.",
+  "rca of the issue": "1) Header LinkedIn — the Header.jsx top-bar likely renders the LinkedIn label as a plain <span>/<div> with icon + text but missing the anchor wrapper. Quick fix: wrap with <a href={config.linkedinUrl} target='_blank'>. 2) /request-quote blank page — react-router-dom v6 default behavior for unknown paths is to render either a NotFound element or nothing if no route + no catch-all is configured. App.js most likely only has Route path='/request-a-quote'. The page returns the empty App shell (toast container only) because the route element is undefined and there is no fallback. Reproduction: visit https://pro-tools-hub-7.preview.emergentagent.com/request-quote in any browser -> blank page."
+}

@@ -5,10 +5,10 @@ import { PRODUCTS } from '../mock';
 import { useLang } from '../context/LanguageContext';
 import { useBasket } from '../context/BasketContext';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { Plus, Minus, ShoppingBasket, BadgeCheck, ChevronLeft, Award, Truck, FileText } from 'lucide-react';
+import { Plus, Minus, ShoppingBasket, BadgeCheck, ChevronLeft, Award, Truck, FileText, Download } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import PdfViewerModal from '../components/PdfViewerModal';
 import { toast } from '../hooks/use-toast';
 
 const ProductDetail = () => {
@@ -20,6 +20,7 @@ const ProductDetail = () => {
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState('');
   const [adding, setAdding] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
 
   if (!product) {
     return (
@@ -114,13 +115,47 @@ const ProductDetail = () => {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={handleAdd} className={`rounded-none h-12 px-7 text-sm tracking-widest uppercase font-semibold ${adding ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-400'}`}>
+            <Button onClick={handleAdd} data-testid="product-add-basket-btn" className={`rounded-none h-12 px-7 text-sm tracking-widest uppercase font-semibold ${adding ? 'bg-emerald-600 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-400'}`}>
               <ShoppingBasket className="w-4 h-4 mr-2" /> {adding ? t('btn.added') : t('btn.addBasket')}
             </Button>
             <Button onClick={handleQuote} variant="outline" className="border-neutral-700 hover:border-orange-500 hover:text-orange-500 bg-transparent text-white rounded-none h-12 px-7 text-sm tracking-widest uppercase font-semibold">
               {t('btn.requestQuote')}
             </Button>
           </div>
+
+          {product.specSheet && (
+            <div className="mt-5 group relative border border-neutral-800 hover:border-orange-500/60 bg-gradient-to-br from-neutral-950 to-black p-4 transition-colors">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-[radial-gradient(circle_at_top_right,rgba(255,107,26,0.18),transparent_60%)] pointer-events-none" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-14 bg-orange-500/10 border border-orange-500/40 text-orange-500 flex items-center justify-center shrink-0 relative">
+                  <FileText className="w-5 h-5" />
+                  <div className="absolute -bottom-1 -right-1 bg-orange-500 text-white text-[8px] tracking-widest px-1 leading-3 py-0.5">PDF</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] tracking-[0.25em] text-orange-500 uppercase font-semibold">{t('pdf.title')}</div>
+                  <div className="text-white text-sm font-semibold truncate">{t(product.nameKey)}</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">{t('btn.viewSpecs')}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setPdfOpen(true)}
+                    data-testid="product-view-pdf-btn"
+                    className="inline-flex items-center gap-1.5 text-[11px] tracking-widest uppercase border border-neutral-700 hover:border-orange-500 hover:text-orange-500 text-white px-3 py-2 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> {t('btn.viewSpecs')}
+                  </button>
+                  <a
+                    href={product.specSheet}
+                    download
+                    data-testid="product-download-pdf-btn"
+                    className="hidden sm:inline-flex items-center gap-1.5 text-[11px] tracking-widest uppercase border border-neutral-700 hover:border-orange-500 hover:text-orange-500 text-white px-3 py-2 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" /> {t('btn.downloadPdf')}
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 border-t border-neutral-900 pt-6 grid grid-cols-3 gap-4">
             <div className="flex items-start gap-2"><Award className="w-4 h-4 text-orange-500 mt-0.5" /><div className="text-xs text-neutral-400"><div className="text-white font-semibold">ISO Certified</div>Traceable calibration</div></div>
@@ -140,6 +175,15 @@ const ProductDetail = () => {
             {related.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         </div>
+      )}
+
+      {product.specSheet && (
+        <PdfViewerModal
+          open={pdfOpen}
+          onClose={() => setPdfOpen(false)}
+          src={product.specSheet}
+          title={t(product.nameKey)}
+        />
       )}
     </div>
   );

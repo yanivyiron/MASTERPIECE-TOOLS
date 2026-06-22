@@ -51,7 +51,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'IT6 / IT7', material: 'Tool Steel (HRC 60+)', standard: 'ISO 1938-1 / DIN 2245', range: 'Ø1.0 – 200.0 mm', finish: 'Lapped & polished', certificate: 'ISO 17025 / DAkkS optional' },
     features: ['Hardened tool steel construction', 'Sub-micron lapping finish', 'Traceable calibration certificate', 'GO / NO-GO pair available'],
     leadTime: '2-4 weeks',
-    badge: 'aerospace'
+    badge: 'aerospace',
+    specSheet: '/specs/metric-size-plug.pdf'
   },
   {
     id: 'p2', slug: 'metric-size-ring', nameKey: 'p.metricRing',
@@ -61,7 +62,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'IT6 / IT7', material: 'Tool Steel (HRC 60+)', standard: 'ISO 1938-1 / DIN 2250', range: 'Ø3.0 – 300.0 mm', finish: 'Internal precision-ground', certificate: 'ISO 17025 / DAkkS optional' },
     features: ['Hardened ring with knurled exterior', 'Internal mirror finish', 'GO / NO-GO available', 'Traceable to NMI standards'],
     leadTime: '2-4 weeks',
-    badge: 'aerospace'
+    badge: 'aerospace',
+    specSheet: '/specs/metric-size-ring.pdf'
   },
   {
     id: 'p3', slug: 'thread-plug', nameKey: 'p.threadPlug',
@@ -71,7 +73,8 @@ export const PRODUCTS = [
     specs: { tolerance: '6H / 6G / 4H5H', material: 'Tool Steel HRC 60-62', standard: 'ISO 1502 / DIN 13', range: 'M1 – M200', pitch: '0.25 – 6 mm', certificate: 'Calibration cert included' },
     features: ['Metric ISO thread system', 'GO + NO-GO configuration', 'Hardened & ground threads', 'Multiple tolerance classes'],
     leadTime: '2-4 weeks',
-    badge: 'iso'
+    badge: 'iso',
+    specSheet: '/specs/thread-plug.pdf'
   },
   {
     id: 'p4', slug: 'inch-size-ring', nameKey: 'p.inchRing',
@@ -81,7 +84,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'XX / X / Y / Z', material: 'Tool Steel HRC 60+', standard: 'ASME B89.1.6', range: '0.040" – 12.000"', finish: 'Internal lapped', certificate: 'NIST traceable' },
     features: ['Inch system master ring', 'Class XX through Z', 'Lifetime stability', 'Custom sizes available'],
     leadTime: '2-4 weeks',
-    badge: 'aerospace'
+    badge: 'aerospace',
+    specSheet: '/specs/inch-size-ring.pdf'
   },
   {
     id: 'p5', slug: 'inch-size-plug', nameKey: 'p.inchPlug',
@@ -91,7 +95,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'XX / X / Y / Z', material: 'Tool Steel HRC 60+', standard: 'ASME B89.1.5', range: '0.0100" – 8.0000"', finish: 'Lapped sub-micron', certificate: 'NIST traceable' },
     features: ['Inch system master plug', 'Class XX (±0.00002")', 'Carbide tip option', 'Custom step plug available'],
     leadTime: '2-4 weeks',
-    badge: 'aerospace'
+    badge: 'aerospace',
+    specSheet: '/specs/inch-size-plug.pdf'
   },
   {
     id: 'p6', slug: 'thread-ring', nameKey: 'p.threadRing',
@@ -101,7 +106,8 @@ export const PRODUCTS = [
     specs: { tolerance: '6g / 6e / 4g6g', material: 'Hardened Steel', standard: 'ISO 1502 / DIN 13', range: 'M1 – M200', type: 'Adjustable / Solid', certificate: 'Calibration cert included' },
     features: ['Adjustable or solid ring', 'External thread verification', 'GO / NO-GO sets', 'Knurled grip surface'],
     leadTime: '2-4 weeks',
-    badge: 'iso'
+    badge: 'iso',
+    specSheet: '/specs/thread-ring.pdf'
   },
   {
     id: 'p7', slug: 'thread-plug-basic-npt', nameKey: 'p.threadPlugNPT',
@@ -111,7 +117,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'L1 / L2 / L3', material: 'Tool Steel HRC 60+', standard: 'ANSI B1.20.1 / ISO 7-2', range: 'NPT 1/16" – 4"', taper: '1:16 (¾"/ft)', certificate: 'Traceable certificate' },
     features: ['American National Standard taper', 'L1 step gauge included', 'NPTF dryseal available', 'Pipe thread inspection'],
     leadTime: '3-5 weeks',
-    badge: 'precision'
+    badge: 'precision',
+    specSheet: '/specs/thread-plug-basic-npt.pdf'
   },
   {
     id: 'p8', slug: 'thread-ring-basic-npt', nameKey: 'p.threadRingNPT',
@@ -121,7 +128,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'L1 Basic', material: 'Hardened Steel', standard: 'ANSI B1.20.1', range: 'NPT/NPTF 1/16" – 4"', taper: '1:16', certificate: 'Calibration cert included' },
     features: ['Basic L1 reference ring', 'NPT/NPTF compatible', 'External taper thread', 'Hand-tight verification'],
     leadTime: '3-5 weeks',
-    badge: 'precision'
+    badge: 'precision',
+    specSheet: '/specs/thread-ring-basic-npt.pdf'
   },
   {
     id: 'p9', slug: 'thread-plug-basic', nameKey: 'p.threadPlugBasic',
@@ -131,7 +139,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'Basic / Class X', material: 'Hardened Steel', standard: 'ISO 1502', range: 'Custom on request', certificate: 'Calibration cert included' },
     features: ['Reference master plug', 'High-accuracy basic class', 'Suitable for setting gauges', 'Custom specifications'],
     leadTime: '2-4 weeks',
-    badge: 'iso'
+    badge: 'iso',
+    specSheet: '/specs/thread-plug-basic-npt.pdf'
   },
   {
     id: 'p10', slug: 'taper-thread-ring', nameKey: 'p.taperThreadRing',
@@ -141,7 +150,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'L1 / L2', material: 'Tool Steel', standard: 'ANSI B1.20.1 / ISO 7-2', range: 'NPT/BSPT 1/16" – 4"', taper: '1:16', certificate: 'Traceable certificate' },
     features: ['Tapered external thread ring', 'BSPT & NPT versions', 'L1 dryseal available', 'Heat-treated for stability'],
     leadTime: '3-5 weeks',
-    badge: 'precision'
+    badge: 'precision',
+    specSheet: '/specs/thread-ring-basic-npt.pdf'
   },
   {
     id: 'p11', slug: 'plug-ring-smooth-gauges', nameKey: 'p.smoothGauges',
@@ -151,7 +161,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'IT5 / IT6 / IT7', material: 'Tool Steel / Carbide', standard: 'ISO 1938 / ASME B89.1', range: 'Custom Ø0.5 – 500 mm', finish: 'Lapped mirror', certificate: 'ISO 17025 optional' },
     features: ['Bore + shaft inspection', 'Pair sets (plug + ring)', 'Carbide option for wear life', 'GO / NO-GO marking'],
     leadTime: '2-4 weeks',
-    badge: 'aerospace'
+    badge: 'aerospace',
+    specSheet: '/specs/metric-size-plug.pdf'
   },
   {
     id: 'p12', slug: 'buttress-gauge', nameKey: 'p.buttressGauge',
@@ -161,7 +172,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'Custom per drawing', material: 'Tool Steel HRC 60+', standard: 'DIN 513 / ANSI B1.9', range: 'Custom on request', angle: '7° / 45°', certificate: 'Full inspection report' },
     features: ['Buttress thread (load-bearing)', 'Oil-industry applications', 'Custom asymmetric profiles', 'Drawing-based manufacture'],
     leadTime: '4-6 weeks',
-    badge: 'precision'
+    badge: 'precision',
+    specSheet: '/specs/thread-plug.pdf'
   },
   // Additional products from the home page list (also from masterpiece-tools.com)
   {
@@ -172,7 +184,8 @@ export const PRODUCTS = [
     specs: { tolerance: 'L1 / L2 / L3', material: 'Tool Steel', standard: 'ANSI B1.20.1 / ISO 7-2', range: 'NPT 1/16" – 4"', taper: '1:16', certificate: 'Calibration cert included' },
     features: ['Tapered pipe thread plug', 'L1 hand-tight reference', 'L2 wrench-tight option', 'NPTF dryseal capable'],
     leadTime: '3-5 weeks',
-    badge: 'precision'
+    badge: 'precision',
+    specSheet: '/specs/thread-plug-basic-npt.pdf'
   },
   {
     id: 'p14', slug: 'helicoil-metric-plug', nameKey: 'p.helicoilMetric',
@@ -182,7 +195,8 @@ export const PRODUCTS = [
     specs: { tolerance: '6H (STI)', material: 'Hardened Steel HRC 60+', standard: 'ISO 1502 (STI)', range: 'M2 – M48', certificate: 'Calibration cert included' },
     features: ['Screw Thread Insert (STI) plug', 'For Helicoil tapped holes', 'Pre-insert tap verification', 'GO + NO-GO pair'],
     leadTime: '2-4 weeks',
-    badge: 'iso'
+    badge: 'iso',
+    specSheet: '/specs/thread-plug.pdf'
   },
   {
     id: 'p15', slug: 'helicoil-inch-plug', nameKey: 'p.helicoilInch',
@@ -192,7 +206,8 @@ export const PRODUCTS = [
     specs: { tolerance: '2B / 3B (STI)', material: 'Hardened Steel', standard: 'ANSI B1.1 (STI)', range: '#2 – 1-1/2"', certificate: 'Calibration cert included' },
     features: ['STI Helicoil inch plug', 'Class 2B / 3B fit', 'For inserted threads', 'GO / NO-GO available'],
     leadTime: '2-4 weeks',
-    badge: 'iso'
+    badge: 'iso',
+    specSheet: '/specs/inch-size-plug.pdf'
   },
   // Custom Cutting Tools
   {

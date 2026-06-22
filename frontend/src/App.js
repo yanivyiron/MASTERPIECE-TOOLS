@@ -2,12 +2,15 @@ import React, { useEffect } from 'react';
 import './App.css';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LanguageProvider } from './context/LanguageContext';
 import { BasketProvider } from './context/BasketContext';
 import { AuthProvider } from './context/AuthContext';
+import { SiteConfigProvider } from './context/SiteConfigContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BasketDrawer from './components/BasketDrawer';
+import FloatingWhatsApp from './components/FloatingWhatsApp';
 import { ScrollProgress } from './components/animations';
 import { Toaster } from './components/ui/toaster';
 
@@ -32,49 +35,73 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Page transition wrapper — slide+fade on route change
+const PageTransition = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 14 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
+  >
+    {children}
+  </motion.div>
+);
+
 const PublicShell = ({ children }) => (
   <>
     <ScrollProgress />
     <Header />
-    <main>{children}</main>
+    <main><PageTransition>{children}</PageTransition></main>
     <Footer />
     <BasketDrawer />
+    <FloatingWhatsApp />
   </>
 );
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PublicShell><Home /></PublicShell>} />
+        <Route path="/products" element={<PublicShell><Products /></PublicShell>} />
+        <Route path="/product/:slug" element={<PublicShell><ProductDetail /></PublicShell>} />
+        <Route path="/category/:slug" element={<PublicShell><CategoryPage /></PublicShell>} />
+        <Route path="/about" element={<PublicShell><About /></PublicShell>} />
+        <Route path="/request-a-quote" element={<PublicShell><RequestQuote /></PublicShell>} />
+        <Route path="/basket" element={<PublicShell><Basket /></PublicShell>} />
+
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="quotes" element={<AdminQuotes />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="customers" element={<AdminCustomers />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+      </Routes>
+    </AnimatePresence>
+  );
+};
 
 function App() {
   return (
     <HelmetProvider>
-      <LanguageProvider>
-        <BasketProvider>
-          <AuthProvider>
-            <div className="App bg-black text-white antialiased">
-              <BrowserRouter>
-                <ScrollToTop />
-                <Routes>
-                  <Route path="/" element={<PublicShell><Home /></PublicShell>} />
-                  <Route path="/products" element={<PublicShell><Products /></PublicShell>} />
-                  <Route path="/product/:slug" element={<PublicShell><ProductDetail /></PublicShell>} />
-                  <Route path="/category/:slug" element={<PublicShell><CategoryPage /></PublicShell>} />
-                  <Route path="/about" element={<PublicShell><About /></PublicShell>} />
-                  <Route path="/request-a-quote" element={<PublicShell><RequestQuote /></PublicShell>} />
-                  <Route path="/basket" element={<PublicShell><Basket /></PublicShell>} />
-
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="quotes" element={<AdminQuotes />} />
-                    <Route path="products" element={<AdminProducts />} />
-                    <Route path="customers" element={<AdminCustomers />} />
-                    <Route path="settings" element={<AdminSettings />} />
-                  </Route>
-                </Routes>
-                <Toaster />
-              </BrowserRouter>
-            </div>
-          </AuthProvider>
-        </BasketProvider>
-      </LanguageProvider>
+      <SiteConfigProvider>
+        <LanguageProvider>
+          <BasketProvider>
+            <AuthProvider>
+              <div className="App bg-black text-white antialiased">
+                <BrowserRouter>
+                  <ScrollToTop />
+                  <AnimatedRoutes />
+                  <Toaster />
+                </BrowserRouter>
+              </div>
+            </AuthProvider>
+          </BasketProvider>
+        </LanguageProvider>
+      </SiteConfigProvider>
     </HelmetProvider>
   );
 }

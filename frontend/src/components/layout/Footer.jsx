@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../Logo';
 import { useLang } from '../../context/LanguageContext';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 import { Mail, Phone, MapPin, Linkedin, Globe, Building2, Clock } from 'lucide-react';
 
 const Footer = () => {
   const { t } = useLang();
+  const { config } = useSiteConfig();
   return (
     <footer className="bg-neutral-950 border-t border-neutral-900 text-neutral-400">
       <div className="max-w-[1400px] mx-auto px-6 py-16">
@@ -14,12 +16,16 @@ const Footer = () => {
             <Logo />
             <p className="mt-5 text-sm text-neutral-400 max-w-md leading-relaxed">{t('footer.about')}</p>
             <div className="mt-5 text-xs text-neutral-500 space-y-1">
-              <div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-orange-500" /><span>Masterpiece Innovations B.V.</span></div>
-              <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-orange-500" /><span>Van Heuven Goedhartlaan, 1181 LE Amstelveen, Netherlands</span></div>
+              <div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-orange-500 shrink-0" /><span>{config.companyName}</span></div>
+              <div className="flex items-start gap-2"><MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" /><span>{config.companyAddress}</span></div>
             </div>
             <div className="mt-6 flex items-center gap-3">
-              <a href="#" aria-label="LinkedIn" className="w-9 h-9 inline-flex items-center justify-center border border-neutral-800 hover:border-orange-500 hover:text-orange-500 rounded transition-colors"><Linkedin className="w-4 h-4" /></a>
-              <a href="https://www.masterpiece-tools.com" target="_blank" rel="noopener noreferrer" aria-label="Website" className="w-9 h-9 inline-flex items-center justify-center border border-neutral-800 hover:border-orange-500 hover:text-orange-500 rounded transition-colors"><Globe className="w-4 h-4" /></a>
+              <a href={config.linkedinUrl || '#'} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" data-testid="footer-linkedin" className="w-9 h-9 inline-flex items-center justify-center border border-neutral-800 hover:border-orange-500 hover:text-orange-500 rounded transition-colors">
+                <Linkedin className="w-4 h-4" />
+              </a>
+              <a href={config.websiteUrl || 'https://www.masterpiece-tools.com'} target="_blank" rel="noopener noreferrer" aria-label="Website" className="w-9 h-9 inline-flex items-center justify-center border border-neutral-800 hover:border-orange-500 hover:text-orange-500 rounded transition-colors">
+                <Globe className="w-4 h-4" />
+              </a>
             </div>
           </div>
 
@@ -46,15 +52,15 @@ const Footer = () => {
           <div className="md:col-span-2">
             <div className="text-white text-sm font-semibold tracking-widest uppercase mb-4">{t('footer.contact')}</div>
             <ul className="space-y-2.5 text-sm">
-              <li className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href="mailto:yaniv@masterpiece-innovations.com" className="hover:text-orange-500 break-all">yaniv@masterpiece-innovations.com</a></li>
-              <li className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href="tel:+31625363610" className="hover:text-orange-500">+31 6 25363610</a></li>
-              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <span>RFQ response 24-48h</span></li>
+              <li className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href={`mailto:${config.contactEmail}`} className="hover:text-orange-500 break-all">{config.contactEmail}</a></li>
+              <li className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href={`tel:${(config.contactPhone || '').replace(/\s/g, '')}`} className="hover:text-orange-500">{config.contactPhone}</a></li>
+              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <span>RFQ response {config.rfqResponseTime}</span></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-neutral-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs text-neutral-500">
-          <span>© {new Date().getFullYear()} Masterpiece Innovations B.V. {t('footer.rights')}.</span>
+          <span>© {new Date().getFullYear()} {config.companyName}. {t('footer.rights')}.</span>
           <span className="tracking-wider">European Supply • ISO Certified • Aerospace Approved</span>
         </div>
       </div>
