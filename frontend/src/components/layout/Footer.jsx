@@ -3,13 +3,35 @@ import { Link } from 'react-router-dom';
 import Logo from '../Logo';
 import { useLang } from '../../context/LanguageContext';
 import { useSiteConfig } from '../../context/SiteConfigContext';
-import { Mail, Phone, MapPin, Linkedin, Globe, Building2, Clock } from 'lucide-react';
+import { Mail, Phone, MapPin, Linkedin, Globe, Building2, Clock, Languages } from 'lucide-react';
 
 const Footer = () => {
-  const { t } = useLang();
+  const { t, lang, setLang, languages } = useLang();
   const { config } = useSiteConfig();
   return (
     <footer className="bg-neutral-950 border-t border-neutral-900 text-neutral-400">
+      {/* Mobile-first language switcher — always visible, useful on small screens */}
+      <div className="lg:hidden border-b border-neutral-900">
+        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between gap-3" data-testid="footer-language-bar">
+          <div className="inline-flex items-center gap-2 text-[11px] tracking-widest uppercase text-neutral-500">
+            <Languages className="w-3.5 h-3.5 text-orange-500" /> {t('lang.label')}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 justify-end">
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLang(l.code)}
+                aria-label={l.name}
+                aria-pressed={l.code === lang}
+                data-testid={`footer-lang-${l.code}`}
+                className={`px-2.5 py-1.5 text-[11px] tracking-widest uppercase font-semibold border transition-colors ${l.code === lang ? 'border-orange-500 text-orange-500 bg-orange-500/10' : 'border-neutral-800 text-neutral-300 hover:border-neutral-600 hover:text-white'}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
       <div className="max-w-[1400px] mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
           <div className="md:col-span-5">
