@@ -66,8 +66,9 @@ const Footer = () => {
             <ul className="space-y-2.5 text-sm">
               <li><Link to="/about" className="hover:text-orange-500">{t('nav.about')}</Link></li>
               <li><Link to="/admin/login" className="hover:text-orange-500">{t('nav.admin')}</Link></li>
-              <li><a href="#" className="hover:text-orange-500">{t('footer.privacy')}</a></li>
-              <li><a href="#" className="hover:text-orange-500">{t('footer.terms')}</a></li>
+              <li><Link to="/legal/imprint" className="hover:text-orange-500" data-testid="footer-imprint">Imprint</Link></li>
+              <li><Link to="/legal/privacy" className="hover:text-orange-500" data-testid="footer-privacy">{t('footer.privacy')}</Link></li>
+              <li><Link to="/legal/terms" className="hover:text-orange-500" data-testid="footer-terms">{t('footer.terms')}</Link></li>
             </ul>
           </div>
 

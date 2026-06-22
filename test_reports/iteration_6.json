@@ -1,0 +1,53 @@
+{
+  "summary": "Iteration 6 — regression + smoke pass after legal pages, Wix-like visual editor, Web Importer, and OCR/vision were added. Backend regression: 40/40 pytest pass (test_phase2_features.py + backend_test.py). New backend endpoints (legal pages, /api/admin/site-overrides GET/PUT/DELETE, /api/admin/web/crawl, /api/admin/web/import, customer single-email schema, settings round-trip without nesting) all behave correctly. AI vision/OCR works end-to-end — AI replied 'PART-XYZ-42' for the synthetic PNG. Web Importer UI is fully functional (crawl → tick heading → 'Import as documents' → toast 'Imported · 1 documents' → new doc visible in GET /api/admin/ai/documents). Legal routes /legal/imprint, /legal/privacy, /legal/terms render 200, footer testids navigate correctly, homepage exposes <html lang>, <title>, <meta description>, <link rel=canonical>, JSON-LD. Owner login form now has type=email/password inputs with data-testid owner-login-email/owner-login-password. All 11 admin pages render without non-401 console errors. ONE high-priority frontend bug found: the Wix-like editor SAVE button does the optimistic local update (new text appears in the DOM) but no network PUT /api/admin/site-overrides is ever issued, so the override is NOT persisted (GET /api/settings shows site_overrides={} after save; reload reverts to default). Direct fetch from the browser to the same endpoint with the same JWT returns 200, confirming the backend is fine — the bug is in the SAVE click path in EditableText.jsx / SiteConfigContext.setOverride.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "EditableText.jsx + SiteConfigContext.setOverride()",
+        "issue": "Clicking the SAVE button (data-testid edit-save-<key>) in the Wix-like editor performs the optimistic in-memory update but never fires PUT /api/admin/site-overrides. Network panel shows zero requests to /admin/site-overrides during a save. The editor UI also remains visible after the click (SAVE/CANCEL/RESET still on screen), so save() handler appears to not run at all. A direct browser fetch to PUT /api/admin/site-overrides with the same JWT returns 200, so it is purely a frontend handler/click-path issue. Suspected cause: the SAVE <button> is nested inside the same H1 (Tag) that the parent uses for onDoubleClick / outline overlay — the click target may be eaten by the parent dashed-outline overlay or the button is unmounted before its handler executes. Recommend: (a) await setOverride() before setEditing(false), (b) stopPropagation on the SAVE button onClick, (c) consider rendering the toolbar in a portal so it sits above the editable Tag.",
+        "selector": "[data-testid=\"edit-save-home.hero.title1\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_features": [
+    {"feature": "Legal pages render", "evidence": "GET /legal/imprint /privacy /terms all return 200; footer-imprint/privacy/terms data-testids present on /; clicking each navigates to /legal/<slug>.", "status": "PASS"},
+    {"feature": "Floating edit toggle (owner only)", "evidence": "With owner JWT in localStorage, [data-testid=floating-edit-toggle] visible bottom-left on /; click reveals 16 editable blocks with dashed orange outline; double-click on editable-home.hero.title1 opens the inline input with testid edit-text-home.hero.title1.", "status": "PASS"},
+    {"feature": "Web Importer end-to-end UI", "evidence": "/admin/import: import-url accepts https://example.com, max pages = 2, import-crawl click returns 'Example Domain' card with H1 heading checkbox import-h-0-0; tick + import-as-doc click → toast 'Imported 0 products · 1 documents' and GET /api/admin/ai/documents shows the new 'Example Domain' record.", "status": "PASS"},
+    {"feature": "AI vision/OCR", "evidence": "AI Studio conversation, message 'What part number do you see in this image?' with a 400x80 PNG of 'PART-XYZ-42' → assistantMessage.content = 'The part number visible in the image is **PART-XYZ-42**.' Tesseract is at /usr/bin/tesseract in this env.", "status": "PASS"},
+    {"feature": "Bug fixes hold", "evidence": "(a) PUT /api/admin/settings with the GET response body round-trips with only 1 level of {data:{...}} nesting (no accumulation). (b) POST /api/admin/customers/{email}/email accepts only {subject,html,text} (no recipients) → 200 {ok:true,mode:mock}. (c) /admin/login has [data-testid=owner-login-email type=email] and [data-testid=owner-login-password type=password].", "status": "PASS"},
+    {"feature": "11 admin pages smoke", "evidence": "/admin /admin/ai /admin/quotes /admin/products /admin/categories /admin/customers /admin/blast /admin/import /admin/templates /admin/team /admin/settings all load without redirect to login and produce zero non-401 console errors with a valid owner JWT.", "status": "PASS"},
+    {"feature": "Production readiness", "evidence": "/sitemap.xml=200, /robots.txt=200, /=200. <html lang>, <title>, <meta name=description>, JSON-LD <script type=application/ld+json> all present. <link rel=canonical> only present in DOM (added client-side by Helmet — not in static HTML; OK for SPA).", "status": "PASS"},
+    {"feature": "Backend regression", "evidence": "pytest backend/tests/ -q → 40 passed in 19.38s (0 failures, 0 skips).", "status": "PASS"},
+    {"feature": "Site overrides API (PUT/DELETE)", "evidence": "PUT /api/admin/site-overrides {key,value} → {ok:true,key:...}; GET /api/settings.data.site_overrides reflects it; DELETE /api/admin/site-overrides/{key} → {ok:true}.", "status": "PASS"}
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_phase2_features.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration_6.xml"
+  ],
+  "action_items": [
+    "[HIGH] Fix EditableText SAVE click — it does the optimistic local update but never fires PUT /api/admin/site-overrides. Likely: await api call before setEditing(false), or stopPropagation on the SAVE button, or render the toolbar in a portal. Without this fix the Wix-like editor changes don't persist."
+  ],
+  "critical_code_review_comments": [
+    "SiteConfigContext.setOverride/resetOverride are fire-and-forget (`await` is inside the function but the caller in EditableText.save() doesn't await). If setEditing(false) unmounts the button before the fetch goes out, the request silently never fires. Always await the API call before tearing down the UI, or queue the call outside the component's lifecycle.",
+    "The SAVE/CANCEL/RESET buttons live inside the same H1/H2 Tag as the editable text — that Tag has the dashed outline overlay (outline-orange-500). Browser hit-testing on a nested click can be eaten by the overlay element. Render the toolbar in a portal or as a sibling to the Tag.",
+    "Web import endpoint contract: WebImportRequest expects {items:[{type,name|title,content,sourceUrl,...}]}; the frontend builds this correctly but the review request mentioned a {as,selection} payload — make sure docs match.",
+    "/api/admin/site-overrides PUT takes {key,value} in body (single field) — fine, but consider also accepting bulk {site_overrides:{...}} for AI-driven mass edits.",
+    "Canonical <link rel=canonical> is added via Helmet client-side only; bots that don't run JS won't see it. Consider rendering canonical in /app/frontend/public/index.html or doing SSR for the homepage."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (40/40 pytest + all new endpoints manually verified)", "frontend": "92% (all listed flows work except the editor SAVE persistence — 1 high-priority bug)"},
+  "test_credentials": "Owner: yaniv@masterpiece-innovations.com / Master2025! — demoCode → JWT bearer. Frontend stores JWT in localStorage under key 'mpt_owner_jwt'.",
+  "seed_data_creation": "Created and deleted /api/admin/site-overrides/home.hero.title1 multiple times. Created 2 web-imported documents titled 'Example Domain' (left in DB; safe to delete). Created one AI conversation for the OCR test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend is solid (40/40 pytest). Re-test only the Wix-like editor save flow after main agent fixes EditableText.save() / SiteConfigContext.setOverride(). To reproduce: open /, inject mpt_owner_jwt + mpt_admin_session in localStorage, click floating-edit-toggle, dblclick editable-home.hero.title1, type into edit-text-home.hero.title1, click edit-save-home.hero.title1 — observe network panel: PUT /api/admin/site-overrides should fire but currently does NOT. Direct browser fetch with same JWT works fine (200), confirming backend OK. Frontend JWT localStorage key is 'mpt_owner_jwt' (api.js:10).",
+  "rca of the issue": "EditableText.save() = `setOverride(k, draft); setEditing(false)`. setOverride is async with internal await, but the caller does NOT await it. setEditing(false) causes the editing UI (button + input) to unmount. In some browsers, an in-flight fetch initiated by an unmounted component is fine, but here the network panel proves NO fetch was even initiated. The most likely root cause is that the SAVE click never reached the button handler — either because (a) the parent Tag with the dashed outline overlay intercepts the click via stacking, or (b) the editor toolbar is rendered outside the React tree path expected. Confirmation: direct page.evaluate('fetch(PUT /api/admin/site-overrides)') with the same JWT returns 200 and persists. Fix proposal: render the toolbar in a portal pinned to the editable element, and await api.adminPutOverride(...) inside save() before calling setEditing(false)."
+}

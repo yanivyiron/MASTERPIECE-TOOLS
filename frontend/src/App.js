@@ -23,6 +23,7 @@ import CategoryPage from './pages/CategoryPage';
 import About from './pages/About';
 import RequestQuote from './pages/RequestQuote';
 import Basket from './pages/Basket';
+import { Imprint, Privacy, Terms } from './pages/Legal';
 import AdminLogin from './pages/admin/Login';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -83,6 +84,9 @@ const AnimatedRoutes = () => {
         <Route path="/quote" element={<Navigate to="/request-a-quote" replace />} />
         <Route path="/rfq" element={<Navigate to="/request-a-quote" replace />} />
         <Route path="/basket" element={<PublicShell><Basket /></PublicShell>} />
+        <Route path="/legal/imprint" element={<PublicShell><Imprint /></PublicShell>} />
+        <Route path="/legal/privacy" element={<PublicShell><Privacy /></PublicShell>} />
+        <Route path="/legal/terms" element={<PublicShell><Terms /></PublicShell>} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
