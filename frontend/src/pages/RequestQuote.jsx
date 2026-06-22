@@ -13,6 +13,7 @@ import { toast } from '../hooks/use-toast';
 import CountryCombobox from '../components/CountryCombobox';
 import SEO from '../components/SEO';
 import { productName } from '../hooks/useResolvedProducts';
+import { api } from '../lib/api';
 
 const RequestQuote = () => {
   const { t } = useLang();
@@ -34,19 +35,39 @@ const RequestQuote = () => {
   const submit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 900));
-    const quote = {
-      ...form, productTypes, items,
-      files: files.map(f => f.name), submittedAt: new Date().toISOString()
+    const payload = {
+      firstName: form.firstName,
+      lastName: form.lastName || '',
+      email: form.email,
+      company: form.company,
+      country: form.country || '',
+      phone: form.phone || '',
+      industry: form.industry || '',
+      message: form.message || '',
+      productTypes,
+      items: items.map((it) => ({ id: it.id, slug: it.slug, name: productName(it, t), qty: it.qty, notes: it.notes || '', image: it.image })),
+      files: files.map((f) => f.name),
     };
+
+    let qid = null;
+    try {
+      const res = await api.submitQuote(payload);
+      qid = res?.qid;
+    } catch (err) {
+      // Backend unreachable — keep the form working via localStorage so we never lose a lead
+      console.warn('Quote API failed, falling back to localStorage:', err?.message);
+    }
+
+    // Always mirror to localStorage as a safety net
     try {
       const existing = JSON.parse(localStorage.getItem('mpt_quotes') || '[]');
-      existing.unshift({ id: 'Q-LOCAL-' + Date.now(), ...quote });
+      existing.unshift({ id: qid || `Q-LOCAL-${Date.now()}`, ...payload, submittedAt: new Date().toISOString() });
       localStorage.setItem('mpt_quotes', JSON.stringify(existing));
     } catch (err) { /* ignore */ }
+
     setSubmitting(false);
     setSuccess(true);
-    toast({ title: t('quote.success'), description: form.email });
+    toast({ title: t('quote.success'), description: qid ? `${qid} — ${form.email}` : form.email });
   };
 
   if (success) {

@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 4 — Full backend + frontend e2e verification of Masterpiece Tools Phase 2. 20/20 pytest backend tests PASS (health, public RFQ submit + 422 validation, admin login with demoCode + 401 wrong password + legacy email rejection, OTP verify + 401 wrong code, /admin/me, protected enforcement, settings PUT/GET roundtrip, admin reply append, customers aggregate). Frontend RFQ end-to-end: filled Smoke/smoke@example.com/SmokeCo, picked France via country combobox (search 'fra' → only FR option), checked combobox edge cases (search 'germ' → only DE option, 'zzzqqqq' → 'No country found' empty state, clear button resets), advanced through 3 steps, submitted → success toast 'Q-2AA4A052 — smoke@example.com'. Backend admin-quotes endpoint confirmed the QID is persisted (count went 3→4). i18n leaks from iteration_3 are FIXED: NL/PT home no longer show 'European Supply • ISO Certified • Aerospace Approved', 'Aerospace-Grade Precision', or 'Absolute Sub-Micron Tolerances' English text — hero correctly localizes to 'Grau Aeroespacial / Calibres de Precisão' (PT) and 'Luchtvaartkwaliteit Precisiekalibers' (NL). Top utility-bar phrase 'ISO/EN compliant • Aerospace Approved' is still English in NL/PT but it's sourced from the admin certifications field per the review_request caveat.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home — top utility strip (NL/PT)", "issues": ["'ISO/EN compliant • Aerospace Approved' still in English in NL/PT. Per review_request this is acceptable because it is read from the admin certifications setting field. Recommend either (a) localize the certifications field via t() with admin override, or (b) document this as expected."]}
+    ]
+  },
+  "verified_features": [
+    {"feature": "GET /api/health", "evidence": "200 → {ok:true, service:'masterpiece-tools-api', version:'2.0.0', email_configured:false, owner_email:'yaniv@masterpiece-innovations.com'}", "status": "PASS"},
+    {"feature": "POST /api/quotes (success)", "evidence": "Alice payload → 200 {ok:true, qid matches ^Q-[A-F0-9]{8}$, email_mode:'mock'}", "status": "PASS"},
+    {"feature": "POST /api/quotes (validation)", "evidence": "invalid email → 422; missing required (email/company) → 422", "status": "PASS"},
+    {"feature": "POST /api/admin/auth/login (success)", "evidence": "{ok:true, ttlSeconds:600, demoCode: 6-digit}", "status": "PASS"},
+    {"feature": "POST /api/admin/auth/login (wrong password)", "evidence": "401 'Invalid credentials'", "status": "PASS"},
+    {"feature": "POST /api/admin/auth/login (legacy admin@masterpiece-tools.com)", "evidence": "401 — legacy email correctly rejected", "status": "PASS"},
+    {"feature": "POST /api/admin/auth/verify (success)", "evidence": "valid code → 200 with token (3-segment JWT), owner.email=yaniv@masterpiece-innovations.com", "status": "PASS"},
+    {"feature": "POST /api/admin/auth/verify (wrong code)", "evidence": "code '000000' → 401", "status": "PASS"},
+    {"feature": "GET /api/admin/me", "evidence": "with Bearer token → 200 {email:'yaniv@…', role:'owner'}", "status": "PASS"},
+    {"feature": "Protected enforcement on /api/admin/quotes", "evidence": "no token → 401; bad token → 401; valid token → 200 with quotes[] and id field (no leaked Mongo _id)", "status": "PASS"},
+    {"feature": "Settings PUT/GET roundtrip", "evidence": "PUT companyName='Acme Co' → GET /api/settings.data.companyName='Acme Co' → restored to original. PUT without auth → 401.", "status": "PASS"},
+    {"feature": "POST /api/admin/quotes/{qid}/reply", "evidence": "200 {ok:true, mode:'mock'}; replies array appended (verified via list endpoint, message+subject match). Missing message → 400. Unknown qid → 404.", "status": "PASS"},
+    {"feature": "GET /api/admin/customers", "evidence": "Aggregates by email, includes alice@test.com with quoteCount>=1, no _id leak. Without auth → 401.", "status": "PASS"},
+    {"feature": "Frontend RFQ → backend submission", "evidence": "Smoke user submitted via /request-a-quote 3-step flow; success toast 'Q-2AA4A052 — smoke@example.com'; admin list shows new quote (count 3→4) with email=smoke@example.com, company=SmokeCo, country=France.", "status": "PASS"},
+    {"feature": "Country combobox edge cases", "evidence": "search 'fra' → [country-option-FR] only; search 'germ' → [country-option-DE] only; search 'zzzqqqq' → empty state with text 'No country found'; clear button resets after selection.", "status": "PASS"},
+    {"feature": "i18n NL home", "evidence": "html lang=nl; hero shows 'Luchtvaartkwaliteit Precisiekalibers'; old English leaks ('Aerospace-Grade Precision', 'Absolute Sub-Micron Tolerances', 'European Supply • ISO Certified • Aerospace Approved') absent.", "status": "PASS"},
+    {"feature": "i18n PT home", "evidence": "html lang=pt; hero shows 'Grau Aeroespacial / Calibres de Precisão'; badge 'CONFORME ISO/EN — APROVADO AEROESPACIAL'; iteration_3 leaks absent.", "status": "PASS"}
+  ],
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/iteration_4.xml"],
+  "action_items": [
+    "(Optional / not blocking) Decide whether top utility-bar 'ISO/EN compliant • Aerospace Approved' should be t()-driven or remain admin-overridable English. Per review_request caveat this is acceptable, so no fix is required unless product wants per-language certifications."
+  ],
+  "critical_code_review_comments": [
+    "backend/server.py /api/admin/quotes/{qid}/reply takes Dict[str, Any] body without a Pydantic schema — consider a typed ReplyRequest(message: str, subject: Optional[str]) for stricter validation (currently the only validation is the manual empty check).",
+    "backend/auth.py OTP store is an in-memory dict (_OTP_STORE). Single-instance only; will reset on every container restart and won't survive horizontal scaling. Acceptable for preview; flag for production.",
+    "backend/server.py admin_put_settings does a full document replace via $set on data — no schema. Any malformed body will silently overwrite settings. Acceptable since this is owner-only but consider a SettingsPut Pydantic model.",
+    "backend uses JWT_SECRET default 'mpt-dev-secret-change-me' when env var missing — must be set in production deployment.",
+    "/api/admin/quotes leaks the qid via id field which is fine, but exposes the underlying Mongo _id as id (str ObjectId). Frontend uses qid; the id field is unused — consider dropping it.",
+    "CORS allow_origins defaults to '*' with allow_credentials=true — browsers reject credentialed requests with wildcard origin. Lock CORS_ORIGINS in prod."
+  ],
+  "updated_files": ["/app/backend/tests/__init__.py (new)", "/app/backend/tests/backend_test.py (new, 20 pytest tests)"],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "100% of requested flows (RFQ e2e, country combobox edge cases, i18n NL/PT regression all PASS)"},
+  "test_credentials": "Admin owner: yaniv@masterpiece-innovations.com / Master2025! — OTP returned in /api/admin/auth/login response as demoCode (SMTP not configured in preview).",
+  "seed_data_creation": "Test runs create 'TEST_'/Alice and 'Smoke' quotes in MongoDB; preserved per agent_to_agent_context_note (owner relies on existing quotes for admin list testing).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All review_request items verified end-to-end. Backend pytest suite at /app/backend/tests/backend_test.py — re-runnable for regression. The only remaining English-in-NL/PT text on the home page is 'ISO/EN compliant • Aerospace Approved' in the top utility bar (sourced from admin certifications setting, acceptable per review_request caveat). Iteration_3's Footer.jsx and CTA.jsx i18n leaks are confirmed resolved."
+}

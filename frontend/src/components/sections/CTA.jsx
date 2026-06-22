@@ -100,12 +100,12 @@ export const PrecisionShowcase = () => {
           </div>
         </div>
         <div className="lg:col-span-6">
-          <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">Aerospace Grade</div>
-          <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase leading-[1.05]">Aerospace-Grade Precision.<br/>Fully Traceable Calibration.</h2>
+          <div className="text-orange-500 text-xs tracking-[0.25em] uppercase font-semibold mb-3">{t('section.aeroGrade')}</div>
+          <h2 className="text-white font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase leading-[1.05]">{t('section.aeroPrecisionTitle')}<br/>{t('section.aeroPrecisionTitle2')}</h2>
           <ul className="mt-8 space-y-5">
-            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">Absolute Sub-Micron Tolerances</p><p className="text-neutral-400 text-sm mt-1">for mission-critical aerospace components.</p></li>
-            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">ISO/EN compliant traceable certificates</p><p className="text-neutral-400 text-sm mt-1">suitable for aerospace and defense audits.</p></li>
-            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">Rapid European turn-around</p><p className="text-neutral-400 text-sm mt-1">ensuring zero downtime for mission-critical facilities.</p></li>
+            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">{t('section.tolBullet')}</p><p className="text-neutral-400 text-sm mt-1">{t('section.tolBulletDesc')}</p></li>
+            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">{t('section.isoBullet')}</p><p className="text-neutral-400 text-sm mt-1">{t('section.isoBulletDesc')}</p></li>
+            <li className="border-l-2 border-orange-500 pl-4 transition-transform hover:translate-x-1"><p className="text-neutral-200 font-medium">{t('section.rapidBullet')}</p><p className="text-neutral-400 text-sm mt-1">{t('section.rapidBulletDesc')}</p></li>
           </ul>
           <Link to="/request-a-quote" className="group inline-flex items-center gap-2 mt-9 px-7 h-12 bg-orange-500 hover:bg-orange-400 text-white text-sm font-semibold tracking-widest uppercase transition-colors shadow-xl shadow-orange-500/30">
             {t('hero.cta1')} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

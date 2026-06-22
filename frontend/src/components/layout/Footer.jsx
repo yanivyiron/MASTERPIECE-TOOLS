@@ -54,14 +54,14 @@ const Footer = () => {
             <ul className="space-y-2.5 text-sm">
               <li className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href={`mailto:${config.contactEmail}`} className="hover:text-orange-500 break-all">{config.contactEmail}</a></li>
               <li className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <a href={`tel:${(config.contactPhone || '').replace(/\s/g, '')}`} className="hover:text-orange-500">{config.contactPhone}</a></li>
-              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <span>RFQ response {config.rfqResponseTime}</span></li>
+              <li className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> <span>{t('about.rfqResponse')} {config.rfqResponseTime}</span></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-neutral-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs text-neutral-500">
           <span>© {new Date().getFullYear()} {config.companyName}. {t('footer.rights')}.</span>
-          <span className="tracking-wider">European Supply • ISO Certified • Aerospace Approved</span>
+          <span className="tracking-wider">{config.certifications}</span>
         </div>
       </div>
     </footer>
