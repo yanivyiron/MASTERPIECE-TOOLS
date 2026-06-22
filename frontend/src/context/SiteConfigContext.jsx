@@ -166,7 +166,13 @@ export const SiteConfigProvider = ({ children }) => {
     setOverride: async (key, value) => {
       // Optimistic local update
       setConfig((c) => ({ ...c, site_overrides: { ...(c.site_overrides || {}), [key]: value } }));
-      try { await api.adminPutOverride(key, value); } catch (e) { console.warn('Override save failed:', e?.message); }
+      try {
+        await api.adminPutOverride(key, value);
+        return { ok: true };
+      } catch (e) {
+        console.warn('Override save failed:', e?.message);
+        return { ok: false, error: e?.message };
+      }
     },
     resetOverride: async (key) => {
       setConfig((c) => {
@@ -174,7 +180,13 @@ export const SiteConfigProvider = ({ children }) => {
         delete next[key];
         return { ...c, site_overrides: next };
       });
-      try { await api.adminDeleteOverride(key); } catch (e) { console.warn('Override reset failed:', e?.message); }
+      try {
+        await api.adminDeleteOverride(key);
+        return { ok: true };
+      } catch (e) {
+        console.warn('Override reset failed:', e?.message);
+        return { ok: false, error: e?.message };
+      }
     },
     editMode,
     setEditMode,
