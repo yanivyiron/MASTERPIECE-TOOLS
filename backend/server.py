@@ -71,6 +71,18 @@ api = APIRouter(prefix="/api")
 # Settings fields that must NEVER leave the backend
 SENSITIVE_SETTINGS = {"smtpPassword"}
 
+# Settings that ONLY the owner can change (admins can read but never write).
+# Admins editing settings via PUT /admin/settings will have these fields silently dropped
+# from the payload so existing values are preserved.
+OWNER_ONLY_SETTINGS_KEYS = {
+    "smtpHost", "smtpPort", "smtpUser", "smtpPassword",
+    "smtpFromEmail", "smtpFromName", "smtpSecurity",
+    "notifyEmail", "replyToEmail",
+    "companyKvk", "companyVat", "companyEmail", "companyOwner",
+    "analyticsCustomHead",        # raw <script> injection — owner only
+    "primaryDomain",
+}
+
 
 # ============================================================
 # Models
@@ -208,12 +220,14 @@ class TeamMemberIn(BaseModel):
     role: str = Field(pattern="^(admin|member)$")
     password: str = Field(min_length=8, max_length=128)
     permissions: Optional[Dict[str, bool]] = None
+    notifications: Optional[Dict[str, bool]] = None  # e.g. {"newRfq": True}
 
 
 class TeamMemberPatch(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = Field(default=None, pattern="^(admin|member)$")
     permissions: Optional[Dict[str, bool]] = None
+    notifications: Optional[Dict[str, bool]] = None
     active: Optional[bool] = None
     password: Optional[str] = Field(default=None, min_length=8, max_length=128)
 
@@ -305,17 +319,48 @@ async def get_public_settings():
     return {"data": _strip_sensitive(doc.get("data", {})), "updatedAt": doc.get("updatedAt")}
 
 
+async def _rfq_notify_recipients() -> List[str]:
+    """Owner notify address + every active team member with notifications.newRfq=true
+    AND quotes.read permission (so they can actually access the data they're notified about)."""
+    recipients = [await get_notify_email()]
+    try:
+        rows = await db.team_members.find(
+            {"active": True, "notifications.newRfq": True},
+            {"email": 1, "permissions": 1, "_id": 0},
+        ).to_list(None)
+        for r in rows:
+            perms = r.get("permissions") or {}
+            if perms.get("quotes.read") and r.get("email"):
+                recipients.append(r["email"])
+    except Exception as e:
+        logger.warning("RFQ notification recipient lookup failed: %s", e)
+    # Dedupe while preserving order
+    seen = set()
+    out = []
+    for e in recipients:
+        if e and e not in seen:
+            seen.add(e); out.append(e)
+    return out
+
+
 async def _send_quote_emails(qid: str, payload: dict, attachments: Optional[List[dict]] = None):
     """Background task — best-effort SMTP using DB config."""
     try:
-        owner_email = await get_notify_email()
-        await send_email(
-            to=owner_email,
-            subject=f"[Masterpiece] New RFQ — {qid} from {payload.get('company')}",
-            html=render_rfq_owner({**payload, "id": qid, "createdAt": now_iso()}),
-            reply_to=payload.get("email"),
-            attachments=attachments,
-        )
+        notify_to = await _rfq_notify_recipients()
+        subject = f"[Masterpiece] New RFQ — {qid} from {payload.get('company')}"
+        html = render_rfq_owner({**payload, "id": qid, "createdAt": now_iso()})
+        # Send one email per recipient (avoids exposing emails to each other via CC).
+        for to_addr in notify_to:
+            try:
+                await send_email(
+                    to=to_addr,
+                    subject=subject,
+                    html=html,
+                    reply_to=payload.get("email"),
+                    attachments=attachments,
+                )
+            except Exception as e:
+                logger.warning("RFQ notification to %s failed: %s", to_addr, e)
         await send_email(
             to=payload.get("email"),
             subject=f"Masterpiece Tools — your quote request {qid}",
@@ -604,6 +649,22 @@ async def admin_put_settings(body: Dict[str, Any], auth=Depends(require_perm("se
         if prior_pw:
             data["smtpPassword"] = prior_pw
 
+    # Lock down owner-only fields when the actor isn't the owner.
+    # Admins keep settings.edit (so they can update analytics, languages, company info)
+    # but cannot touch SMTP credentials, the RFQ notification address, KVK/VAT legal IDs,
+    # or the raw <head> HTML escape hatch.
+    if auth.get("role") != "owner":
+        existing = await db.settings.find_one({"_id": "site"})
+        prior = (existing or {}).get("data", {}) or {}
+        dropped = []
+        for k in OWNER_ONLY_SETTINGS_KEYS:
+            if k in data and data.get(k) != prior.get(k):
+                # Restore prior value silently (no 403 — keeps the rest of the payload valid)
+                data[k] = prior.get(k, "")
+                dropped.append(k)
+        if dropped:
+            logger.info("Admin %s tried to write owner-only fields: %s — preserved prior values.", auth.get("sub"), dropped)
+
     await db.settings.update_one(
         {"_id": "site"},
         {"$set": {"data": data, "updatedAt": now_iso()}},
@@ -861,7 +922,7 @@ async def admin_list_team(auth=Depends(require_perm("team.read"))):
 async def admin_create_team(body: TeamMemberIn, auth=Depends(require_owner)):
     member: Optional[dict] = None
     try:
-        member = await create_team_member(body.email, body.name, body.role, body.password, body.permissions)
+        member = await create_team_member(body.email, body.name, body.role, body.password, body.permissions, body.notifications)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     if member is None:
@@ -890,6 +951,7 @@ async def admin_patch_team(mid: str, body: TeamMemberPatch, auth=Depends(require
     ok = await update_team_member(
         mid,
         name=body.name, role=body.role, permissions=body.permissions,
+        notifications=body.notifications,
         active=body.active, password=body.password,
     )
     if not ok:

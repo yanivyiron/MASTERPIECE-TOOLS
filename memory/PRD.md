@@ -178,6 +178,13 @@
 - **Quote reply** — template selector + attachment picker; backend `QuoteReply` now accepts `{attachments, templateId}` and persists attachment count per reply.
 - **Wix-style floating editor removed** — `FloatingEditToggle` deleted from the public site. Editing now lives entirely inside `/admin/content` (Site Content), grouped into 5 sections × 20 keys with input + save + reset per field. `EditableText` is now a thin read-only renderer.
 
+## Phase 8 — Production hardening (✅ COMPLETE — Feb 2026)
+- **Apex → www API base auto-rewrite** in `frontend/src/lib/api.js` — when the page loads on `www.masterpiece-tools.com` but `REACT_APP_BACKEND_URL` points at the apex, all `/api/*` calls now route to the current page origin. Sidesteps Chrome/Safari refusing to follow 308 CORS preflight redirects.
+- **`<head>` apex→www navigation guard** in `index.html` — bounces direct apex visits to www before React loads.
+- **Owner-only settings lockdown** — `PUT /admin/settings` now silently preserves prior values for `smtpHost/Port/User/Password/FromEmail/FromName/Security`, `notifyEmail`, `replyToEmail`, `companyKvk/Vat/Email/Owner`, `analyticsCustomHead`, `primaryDomain` when the actor is not the owner. An amber "Owner-only" banner in the Email Provider section warns admins.
+- **Per-team-member RFQ notifications** — new `notifications.newRfq` flag on `team_members`; toggled from Team → Edit → Notifications. New `_rfq_notify_recipients()` includes the owner + every active team member with the flag AND `quotes.read` perm.
+- **PDF viewer iOS fallback** — touch devices get an "Open in new tab" + Download UI instead of the broken `<iframe>`.
+
 ## Bugs fixed in this batch
 - **Settings nested-data accumulation**: `PUT /api/admin/settings` now recursively unwraps `{data:{data:{...}}}` before storing. New `POST /api/admin/settings/repair` (owner-only) one-shot maintenance endpoint.
 - **`/api/admin/customers/{email}/email`**: now uses a new `SingleEmailRequest` schema (no `recipients` required, since the URL already names the recipient).

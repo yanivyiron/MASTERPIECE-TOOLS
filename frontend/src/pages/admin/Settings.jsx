@@ -8,6 +8,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Mail, ShieldCheck, Save, Bell, Globe, Building2, MessageCircle, Linkedin, RotateCcw, ImageIcon, MapPin, Search, Check, ExternalLink, KeyRound, SendHorizontal, Loader2, CloudCheck, CloudOff, BarChart3, Database, AlertTriangle } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { useSiteConfig, SITE_CONFIG_DEFAULTS } from '../../context/SiteConfigContext';
+import { useAuth } from '../../context/AuthContext';
 import { ALL_COUNTRIES } from '../../data/countries';
 import { SMTP_PRESETS } from '../../data/smtpPresets';
 import { api } from '../../lib/api';
@@ -39,6 +40,8 @@ const Section = ({ icon: Icon, title, hint, children, testId }) => (
 
 const AdminSettings = () => {
   const { config, updateConfig, resetConfig, saveToServer, serverSynced, hydrating } = useSiteConfig();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   const logoFileRef = useRef(null);
   const ogFileRef = useRef(null);
   const [countryQuery, setCountryQuery] = useState('');
@@ -347,6 +350,11 @@ const AdminSettings = () => {
 
         {/* EMAIL PROVIDER */}
         <Section icon={Mail} title="Email Provider" hint="Pick a free SMTP provider below — each has a built-in tutorial. Credentials are encrypted server-side." testId="settings-email">
+          {!isOwner && (
+            <div className="text-[11px] text-amber-300 border border-amber-500/30 bg-amber-500/5 px-3 py-2 mb-3" data-testid="settings-owner-only-banner">
+              <strong>Owner-only.</strong> SMTP credentials, the RFQ notification address, KVK/VAT legal IDs and the custom &lt;head&gt; HTML block can only be edited by the site owner. Anything you change here will revert when you save.
+            </div>
+          )}
           {/* Free SMTP provider picker */}
           <div className="mb-6">
             <Label className="text-neutral-400 text-[11px] uppercase tracking-widest">Quick setup — pick a free provider</Label>

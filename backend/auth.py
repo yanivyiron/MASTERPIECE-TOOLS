@@ -147,7 +147,7 @@ async def list_team_members() -> List[dict]:
     return out
 
 
-async def create_team_member(email: str, name: str, role: str, password: str, permissions: Optional[dict] = None) -> dict:
+async def create_team_member(email: str, name: str, role: str, password: str, permissions: Optional[dict] = None, notifications: Optional[dict] = None) -> dict:
     e = email.lower().strip()
     if role not in ("admin", "member"):
         raise ValueError("role must be 'admin' or 'member'")
@@ -159,6 +159,7 @@ async def create_team_member(email: str, name: str, role: str, password: str, pe
         "role": role,
         "password_hash": hash_password(password),
         "permissions": permissions or DEFAULT_PERMISSIONS[role],
+        "notifications": notifications or {"newRfq": False},
         "active": True,
         "createdAt": datetime.now(timezone.utc).isoformat(),
     }
@@ -170,7 +171,8 @@ async def create_team_member(email: str, name: str, role: str, password: str, pe
 
 
 async def update_team_member(member_id: str, *, name: Optional[str] = None, role: Optional[str] = None,
-                              permissions: Optional[dict] = None, active: Optional[bool] = None,
+                              permissions: Optional[dict] = None, notifications: Optional[dict] = None,
+                              active: Optional[bool] = None,
                               password: Optional[str] = None) -> bool:
     from bson import ObjectId
     try:
@@ -186,6 +188,8 @@ async def update_team_member(member_id: str, *, name: Optional[str] = None, role
             patch["permissions"] = DEFAULT_PERMISSIONS[role]
     if permissions is not None:
         patch["permissions"] = permissions
+    if notifications is not None:
+        patch["notifications"] = notifications
     if active is not None:
         patch["active"] = bool(active)
     if password:

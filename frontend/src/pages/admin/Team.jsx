@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit3, Trash2, Loader2, ShieldCheck, UserCog, KeyRound } from 'lucide-react';
+import { Plus, Edit3, Trash2, Loader2, ShieldCheck, UserCog, KeyRound, Bell } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from '../../hooks/use-toast';
@@ -19,6 +19,7 @@ const PERM_GROUPS = [
 const blank = (templates) => ({
   email: '', name: '', role: 'member', password: '',
   permissions: { ...(templates?.member || {}) },
+  notifications: { newRfq: false },
 });
 
 const AdminTeam = () => {
@@ -43,7 +44,12 @@ const AdminTeam = () => {
   useEffect(() => { refresh(); }, []);
 
   const startNew = () => setEditor(blank(templates));
-  const startEdit = (m) => setEditor({ ...m, password: '', permissions: { ...(m.permissions || templates[m.role] || {}) } });
+  const startEdit = (m) => setEditor({
+    ...m,
+    password: '',
+    permissions: { ...(m.permissions || templates[m.role] || {}) },
+    notifications: { newRfq: false, ...(m.notifications || {}) },
+  });
 
   const save = async () => {
     if (!editor.email || !editor.name || (!editor.id && !editor.password)) {
@@ -57,6 +63,7 @@ const AdminTeam = () => {
           name: editor.name,
           role: editor.role,
           permissions: editor.permissions,
+          notifications: editor.notifications || { newRfq: false },
         };
         if (editor.password) patch.password = editor.password;
         if (editor.active !== undefined) patch.active = editor.active;
@@ -69,6 +76,7 @@ const AdminTeam = () => {
           role: editor.role,
           password: editor.password,
           permissions: editor.permissions,
+          notifications: editor.notifications || { newRfq: false },
         });
         toast({ title: 'Member invited' });
       }
@@ -205,6 +213,28 @@ const AdminTeam = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="pt-2">
+                <div className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2 flex items-center gap-1.5"><Bell className="w-3 h-3" /> Notifications</div>
+                <div className="border border-neutral-900">
+                  <div className="px-3 py-2">
+                    <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!editor.notifications?.newRfq}
+                        onChange={(e) => setEditor({
+                          ...editor,
+                          notifications: { ...(editor.notifications || {}), newRfq: e.target.checked },
+                        })}
+                        data-testid="admin-team-notif-newRfq"
+                      />
+                      <span>
+                        Receive a copy of every new <strong className="text-white">RFQ / quote request</strong> notification email
+                      </span>
+                    </label>
+                    <p className="text-[11px] text-neutral-500 mt-1 ml-6">Requires the member to also have <code className="text-orange-400 font-mono">quotes.read</code> permission. Owner is always notified.</p>
+                  </div>
+                </div>
               </div>
               {editor.id && (
                 <label className="flex items-center gap-2 text-sm text-neutral-300">
