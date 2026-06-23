@@ -1,7 +1,32 @@
 // Tiny fetch wrapper for the Masterpiece API. Always uses REACT_APP_BACKEND_URL + /api prefix.
-const BASE = process.env.REACT_APP_BACKEND_URL;
+//
+// PROD SAFETY NET: if BASE points at the apex (`masterpiece-tools.com`) but the page is
+// being served from `www.masterpiece-tools.com`, the apex 308-redirects every call to www.
+// Chrome/Safari refuse to follow 308 redirects on CORS preflight requests — so every
+// POST/PUT/DELETE dies with "Failed to fetch" before the body is even sent.
+// Solution: rewrite BASE to match the current page's origin when they share the same
+// registrable domain. That way the API call goes directly to www, no redirect.
+const rawBase = process.env.REACT_APP_BACKEND_URL;
 
-if (!BASE) {
+const computeBase = () => {
+  if (typeof window === 'undefined') return rawBase;
+  try {
+    const env = new URL(rawBase);
+    const page = window.location;
+    const stripWww = (h) => h.replace(/^www\./, '');
+    // Same registrable host (apex vs www) → always use the current page origin to avoid 308.
+    if (stripWww(env.hostname) === stripWww(page.hostname) && env.hostname !== page.hostname) {
+      return `${page.protocol}//${page.host}`;
+    }
+    return rawBase;
+  } catch (_e) {
+    return rawBase;
+  }
+};
+
+const BASE = computeBase();
+
+if (!rawBase) {
   // Fail fast so the developer notices the missing env var early.
   // eslint-disable-next-line no-console
   console.error('REACT_APP_BACKEND_URL is not set; backend calls will fail.');
