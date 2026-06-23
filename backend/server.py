@@ -460,6 +460,46 @@ async def admin_change_email(body: ChangeEmailRequest, auth=Depends(require_owne
     return {"ok": True, "newEmail": body.newEmail}
 
 
+@api.get("/admin/account/me")
+async def admin_account_me(auth=Depends(require_user)):
+    """Self-service profile fetch — every signed-in user can read their own record."""
+    if auth.get("role") == "owner":
+        return {
+            "email": await get_owner_email(),
+            "name": "Owner",
+            "role": "owner",
+            "permissions": DEFAULT_PERMISSIONS["owner"],
+            "notifications": {"newRfq": True},  # owner always notified
+            "active": True,
+            "ownerNotificationsLocked": True,
+        }
+    rec = await db.team_members.find_one({"email": auth["sub"]}, {"password_hash": 0})
+    if not rec:
+        raise HTTPException(status_code=404, detail="User not found")
+    rec["id"] = str(rec.pop("_id"))
+    return rec
+
+
+class NotificationPrefs(BaseModel):
+    newRfq: Optional[bool] = None
+
+
+@api.put("/admin/account/notifications")
+async def admin_update_my_notifications(body: NotificationPrefs, auth=Depends(require_user)):
+    """Team member updates ONLY their own notification preferences."""
+    if auth.get("role") == "owner":
+        # Owner always receives RFQ notifications via notifyEmail — no per-user toggle.
+        return {"ok": True, "ownerNotificationsLocked": True}
+    rec = await db.team_members.find_one({"email": auth["sub"]})
+    if not rec:
+        raise HTTPException(status_code=404, detail="User not found")
+    prefs = rec.get("notifications") or {}
+    if body.newRfq is not None:
+        prefs["newRfq"] = bool(body.newRfq)
+    await update_team_member(str(rec["_id"]), notifications=prefs)
+    return {"ok": True, "notifications": prefs}
+
+
 # ============================================================
 # Admin quotes
 # ============================================================
@@ -690,7 +730,7 @@ async def admin_settings_repair(auth=Depends(require_owner)):
 
 
 @api.post("/admin/db/wipe-test-data")
-async def admin_wipe_test_data(auth=Depends(require_owner)):
+async def admin_wipe_test_data(auth=Depends(require_perm("settings.maintenance"))):
     """Owner-only: clears transactional/test data (quotes, customer overrides, AI conversations,
     customer email history). Keeps settings, users, team, products, categories, templates,
     documents, ai_actions, site_overrides."""

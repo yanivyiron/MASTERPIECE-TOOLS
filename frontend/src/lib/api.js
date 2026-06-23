@@ -94,6 +94,8 @@ export const api = {
   adminDeleteQuote: (qid) => request('DELETE', `/admin/quotes/${qid}`, { auth: true }),
   adminReplyQuote: (qid, payload) => request('POST', `/admin/quotes/${qid}/reply`, { body: payload, auth: true }),
   adminWipeTestData: () => request('POST', '/admin/db/wipe-test-data', { body: {}, auth: true }),
+  adminMyAccount: () => request('GET', '/admin/account/me', { auth: true }),
+  adminUpdateMyNotifications: (prefs) => request('PUT', '/admin/account/notifications', { body: prefs, auth: true }),
 
   // Admin customers
   adminListCustomers: () => request('GET', '/admin/customers', { auth: true }),

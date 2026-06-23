@@ -11,7 +11,7 @@ const PERM_GROUPS = [
   { label: 'Customers',  keys: ['customers.read', 'customers.edit', 'customers.delete', 'customers.email'] },
   { label: 'Products',   keys: ['products.read', 'products.edit', 'products.delete'] },
   { label: 'Categories', keys: ['categories.read', 'categories.edit', 'categories.delete'] },
-  { label: 'Settings',   keys: ['settings.read', 'settings.edit'] },
+  { label: 'Settings',   keys: ['settings.read', 'settings.edit', 'settings.general', 'settings.appearance', 'settings.analytics', 'settings.content', 'settings.maintenance'] },
   { label: 'Team',       keys: ['team.read', 'team.edit', 'team.delete'] },
   { label: 'Templates',  keys: ['templates.read', 'templates.edit'] },
 ];
